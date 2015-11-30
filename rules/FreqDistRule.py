@@ -9,15 +9,13 @@ import operator
 class FreqDistRule(Rule):
     positivePairs = []
     negativePairs = []
+    i = 0
 
     def __init__(self, name):
         self.name = name
 
     def prep(self, record, isPositive):
-        record = str(record)
-        tokens = nltk.word_tokenize(record)
-        fdist = FreqDist(tokens)
-        mostCommonPairs = fdist.most_common(100)
+        mostCommonPairs = self.commonOneHundred(record)
         if(isPositive):
             if(len(self.positivePairs) == 0):
                 self.positivePairs = mostCommonPairs
@@ -35,10 +33,8 @@ class FreqDistRule(Rule):
                     for testPair in mostCommonPairs:
                         index = 0
                         for pair in self.positivePairs:
-                            print(testPair[1] > pair[1])
                             if(testPair[1] > pair[1]):
                                 self.positivePairs.insert(index, testPair)
-                                print("inserted")
                             index += 1
 
 
@@ -49,9 +45,29 @@ class FreqDistRule(Rule):
         self.positivePairs.sort(key=operator.itemgetter(1), reverse=True)
         #del self.positivePairs[-lengthToRemove:]
 
+    def run(self, record, matchedWordsLimit, matchedScoreLimit):
+        mostCommonPairs = self.commonOneHundred(record)
 
+        matchedWords = 0
+        matchedScore = 0
 
+        #compare this record's most common pairs with the standard
+        for testPair in mostCommonPairs:
+            score = 100
+            for pair in self.positivePairs:
+                if(pair[0] == testPair[0]):
+                    #print("Matched: " + pair[0] + " " + testPair[0])
+                    matchedWords += 1
+                    matchedScore += score
+                score -= 1
 
-    def run(self):
-        print(self.positivePairs)
-        print(len(self.positivePairs))
+        if(matchedWords >= matchedWordsLimit and matchedScore >= matchedScoreLimit):
+            return True
+        else:
+            return False
+
+    def commonOneHundred(self, record):
+        content = str(record)
+        tokens = nltk.word_tokenize(content)
+        fdist = FreqDist(tokens)
+        return fdist.most_common(100)

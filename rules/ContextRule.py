@@ -24,6 +24,7 @@ class ContextRule(Rule):
 
         for match in matches:
             #check for negating language here
+            #TODO: Use negX package instead of the weak sauce below
             regex = r'\sno.\s|can\'t|cannot|negative'
             #regex = r'\sno.\s|can\'t|cannot|negative|hardly|unknown|scarcely|shouldn\'t|should\snot|won\'t|will\snot|don\'t|do\snot|never|neither|nor|isn\'t|is\snot|wouldn\'t|would\snot'
             negMatches = re.findall(regex, match)
