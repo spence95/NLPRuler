@@ -29,8 +29,8 @@ class ContextRule(Rule):
             #regex = r'\sno.\s|can\'t|cannot|negative|hardly|unknown|scarcely|shouldn\'t|should\snot|won\'t|will\snot|don\'t|do\snot|never|neither|nor|isn\'t|is\snot|wouldn\'t|would\snot'
             negMatches = re.findall(regex, match)
             if(len(negMatches) == 0):
-                '''
                 #use NLP to pick out the noun and see if it's a symptom or MS
+                '''
                 tokens = nltk.word_tokenize(match)
                 tagged = nltk.pos_tag(tokens)
                 for tag in tagged:
@@ -52,6 +52,7 @@ class ContextRule(Rule):
 
                 regex = r'.{0,' + str(self.lowerLimit) + '}multiple\ssclerosis.{0,' + str(self.upperLimit) + '}|.{0,' + str(self.lowerLimit) + '}\sms\s.{0,' + str(self.upperLimit) + '}'
                 matches = re.findall(regex, match, re.IGNORECASE)
+                '''
                 for match in matches:
                     regex = r'\sno.\s|can\'t|cannot|negative'
                     #regex = r'\sno.\s|can\'t|cannot|negative|hardly|unknown|scarcely|shouldn\'t|should\snot|won\'t|will\snot|don\'t|do\snot|never|neither|nor|isn\'t|is\snot|wouldn\'t|would\snot'
@@ -59,5 +60,8 @@ class ContextRule(Rule):
                     if(len(negMatches) == 0):
                         matched = True
                         break
+                '''
+                if(len(matches) > 0):
+                    matched = True
 
         return matched

@@ -70,4 +70,4 @@ class FreqDistRule(Rule):
         content = str(record)
         tokens = nltk.word_tokenize(content)
         fdist = FreqDist(tokens)
-        return fdist.most_common(100)
+        return fdist.most_common(250)

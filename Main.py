@@ -45,20 +45,13 @@ def run():
 
     for record in trainingSetRecords:
 
-        if(record.isPositive):
-            freqDistRule.prep(record, isPositive)
-
-
-
-        '''
         i = i + 1
         nextRecordText = record.content
         #isPositive = wordBasedRule.run(nextRecordText, "has Multiple Sclerosis")
 
         isPositive = contextRule.run(nextRecordText, phraseList)
-        if(isPositive):
         '''
-            '''
+        if(isPositive):
             matched = phraseListSearchRule.run(nextRecordText, phraseList, percentageRequired)
             if((matched/categories) < percentageRequired):
                 isPositive = False
@@ -71,19 +64,19 @@ def run():
             else:
                 positiveRecords.append(record)
                 masterStr += str(record.ruid) + " " + str(record.entry_date) + " " + str(isPositive) + "\n"
-            '''
-            '''
             positiveRecords.append(record)
             masterStr += str(record.ruid) + " " + str(record.entry_date) + " " + str(isPositive) + "\n"
             #check for data science statistic
+        '''
+        if(isPositive):
             if(record.isPositive):
                 #true Positive
                 truePositives += 1
             else:
                 #false Positive
                 falsePositives += 1
-                f = open("falsePositiveText.txt", 'w')
-                print(nextRecordText, file = f)
+                #f = open("falsePositiveText.txt", 'w')
+                #print(nextRecordText, file = f)
         else:
             if(record.isPositive):
                 #false negative
@@ -91,16 +84,13 @@ def run():
             else:
                 #true negative
                 trueNegatives += 1
-            '''
 
         progress = round((i/length) * 100, 2)
         print("Progress: " + str(progress) + "%")
 
-    freqDistRule.prepStandardPairs()
-    freqDistRule.run()
 
 
-    '''
+
     print("             ")
     print("             ")
     actualPositives = truePositives + falseNegatives
@@ -130,7 +120,6 @@ def run():
 
     f = open("output.txt", 'w')
     print(masterStr, file = f)
-    '''
 
 
     #print("Amount of Positive Records " + str(len(positiveRecords)))

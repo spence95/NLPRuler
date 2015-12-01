@@ -6,6 +6,8 @@ from RecordsManager import RecordsManager
 from rules.PhraseListSearchRule import PhraseListSearchRule
 from rules.ContextRule import ContextRule
 from rules.FreqDistRule import FreqDistRule
+from workers.Worker import Worker
+from workers.YearExtractionWorker import YearExtractionWorker
 
 def run():
     foundRecords = 0
@@ -14,6 +16,7 @@ def run():
     contextRule = ContextRule("ContextRule")
     freqDistRule = FreqDistRule("FreqDistRule")
     rm = RecordsManager("connection")
+    yearExtractionWorker = yearExtractionWorker()
     positiveRecords = []
 
     fileName = "phraseListSymptoms.txt"
@@ -58,11 +61,16 @@ def run():
     matchedWordsLimit = int(input("Please enter matched words limit: "))
     matchedScoreLimit = int(input("Please enter matched score limit: "))
 
+    masterStr = ""
     for record in validationSetRecords:
         isPositive = freqDistRule.run(record.content, matchedWordsLimit, matchedScoreLimit)
+
         if(isPositive == True and record.isPositive == True):
             #true positive
             truePositives += 1
+            #if isPositive, pull out the diagnosis year
+            recordYr = yearExtractionWorker.work(record.content, record.diagnosisYr)
+            masterStr += str(record.ruid) + " ---> " + str(recordYr) + "/r"
         if(isPositive == True and record.isPositive == False):
             #false positive
             falsePositives += 1
@@ -105,12 +113,7 @@ def run():
     print("False Positives: " + str(falsePositives))
     print("False Negatives: " + str(falseNegatives))
 
-
-
-
-
-
-    #print("Amount of Positive Records " + str(len(positiveRecords)))
-    #print("Greatest amount matched: " + str(greatestMatched))
+    f = open("yearOutput.txt", 'w')
+    print(masterStr, file = f)
 
 run()
