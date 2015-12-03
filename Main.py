@@ -5,6 +5,8 @@ from RecordsManager import RecordsManager
 from rules.PhraseListSearchRule import PhraseListSearchRule
 from rules.ContextRule import ContextRule
 from rules.FreqDistRule import FreqDistRule
+from workers.Worker import Worker
+from workers.YearExtractionWorker import YearExtractionWorker
 
 def run():
     foundRecords = 0
@@ -13,6 +15,7 @@ def run():
     contextRule = ContextRule("ContextRule")
     freqDistRule = FreqDistRule("FreqDistRule")
     rm = RecordsManager("connection")
+    yew = YearExtractionWorker()
     positiveRecords = []
 
     fileName = "phraseListSymptoms.txt"
@@ -32,11 +35,12 @@ def run():
                 category.append(line)
 
     percentageRequired = .10
-    trainingSetRecords = rm.getTrainingSetRecords("TrainingSet.txt")
+    trainingSetRecords = rm.getTrainingSetRecords("ValidationSet.txt")
     length = len(trainingSetRecords)
     i = 0
     greatestMatched = 0
     masterStr = ""
+    yearDiagnoseStr = ""
 
     trueNegatives = 0
     truePositives = 0
@@ -72,6 +76,8 @@ def run():
             if(record.isPositive):
                 #true Positive
                 truePositives += 1
+                recordYr = yew.work(record.content, record.diagnosisYr)
+                yearDiagnoseStr += str(record.ruid) + " ---> " + str(recordYr) + "\n"
             else:
                 #false Positive
                 falsePositives += 1
@@ -120,6 +126,9 @@ def run():
 
     f = open("output.txt", 'w')
     print(masterStr, file = f)
+
+    f = open("yearOutput.txt", 'w')
+    print(yearDiagnoseStr, file = f)
 
 
     #print("Amount of Positive Records " + str(len(positiveRecords)))
