@@ -3,8 +3,8 @@ import re
 import difflib
 
 class YearExtractionRule(Rule):
-    upperLimit = 50
-    lowerLimit = 50
+    upperLimit = 20
+    lowerLimit = 20
 
     def __init__(self, name):
         self.name = name
@@ -19,8 +19,7 @@ class YearExtractionRule(Rule):
             return True
         '''
 
-        #yearRegex = r'.{0,' + str(self.lowerLimit) + '}(19|20)\d{2}.{0,' + str(self.upperLimit) + '}'
-        yearRegex = ".{0,50}(19|20)\d{2}.{0,50}"
+        yearRegex = ".{0," + str(self.lowerLimit) + "}(19|20)\d{2}.{0," + str(self.upperLimit) + "}"
         matches = re.search(yearRegex, record, re.IGNORECASE)
         it = re.finditer(yearRegex, record, re.IGNORECASE)
 

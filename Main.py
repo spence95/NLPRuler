@@ -100,6 +100,7 @@ def run():
             #isPositive = wordBasedRule.run(nextRecordText, "has Multiple Sclerosis")
 
             isPositive = contextRule.run(nextRecordText, phraseList)
+            yearCheck = ""
             if(isPositive):
                 yearCheck = yearExtractionRule.run(nextRecordText, 0000)
 
@@ -109,8 +110,7 @@ def run():
                         string = str(record.ruid) + " ---> " + yearCheck.group() + "\n"
                         myfile.write(string)
                     yearDiagnoseStr += str(record.ruid) + " ---> " + str(yearCheck.group()) + "\n"
-                    if(str(record.diagnosisYr) != str(yearCheck.group())):
-                        isPositive = False
+
                 else:
                     isPositive = False
             '''
@@ -133,8 +133,10 @@ def run():
             '''
             if(isPositive):
                 if(record.isPositive):
-                    #true Positive
-                    truePositives += 1
+                    if(str(record.diagnosisYr) != str(yearCheck.group())):
+                        falsePositives += 1
+                    else:
+                        truePositives += 1
                 else:
                     #false Positive
                     falsePositives += 1
