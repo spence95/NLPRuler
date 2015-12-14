@@ -4,6 +4,7 @@ from rules.SimpleWordBasedRule import SimpleWordBasedRule
 from RecordsManager import RecordsManager
 from rules.PhraseListSearchRule import PhraseListSearchRule
 from rules.ContextRule import ContextRule
+from rules.YearExtractionRule import YearExtractionRule
 from rules.FreqDistRule import FreqDistRule
 from workers.Worker import Worker
 from workers.YearExtractionWorker import YearExtractionWorker
@@ -13,6 +14,7 @@ def run():
     wordBasedRule = SimpleWordBasedRule("SimpleWordBasedRule")
     phraseListSearchRule = PhraseListSearchRule("PhraseListSearchRule")
     contextRule = ContextRule("ContextRule")
+    yearExtractionRule = YearExtractionRule("YearExtractionRule")
     freqDistRule = FreqDistRule("FreqDistRule")
     rm = RecordsManager("connection")
     yew = YearExtractionWorker()
@@ -98,6 +100,17 @@ def run():
             #isPositive = wordBasedRule.run(nextRecordText, "has Multiple Sclerosis")
 
             isPositive = contextRule.run(nextRecordText, phraseList)
+            if(isPositive):
+                yearCheck = yearExtractionRule.run(nextRecordText, 0000)
+
+                if(yearCheck != False):
+                    isPositive = True
+                    with open("positiveRUIDs.txt", "a") as myfile:
+                        string = str(record.ruid) + " ---> " + yearCheck.group() + "\n"
+                        myfile.write(string)
+                    yearDiagnoseStr += str(record.ruid) + " ---> " + str(yearCheck) + "\n"
+                else:
+                    isPositive = False
             '''
             if(isPositive):
                 matched = phraseListSearchRule.run(nextRecordText, phraseList, percentageRequired)
@@ -117,11 +130,12 @@ def run():
                 #check for data science statistic
             '''
             if(isPositive):
+
+
                 if(record.isPositive):
                     #true Positive
                     truePositives += 1
-                    recordYr = yew.work(record.content, record.diagnosisYr)
-                    yearDiagnoseStr += str(record.ruid) + " ---> " + str(recordYr) + "\n"
+                    #recordYr = yew.work(record.content, record.diagnosisYr)
                 else:
                     #false Positive
                     falsePositives += 1
