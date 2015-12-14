@@ -108,7 +108,9 @@ def run():
                     with open("positiveRUIDs.txt", "a") as myfile:
                         string = str(record.ruid) + " ---> " + yearCheck.group() + "\n"
                         myfile.write(string)
-                    yearDiagnoseStr += str(record.ruid) + " ---> " + str(yearCheck) + "\n"
+                    yearDiagnoseStr += str(record.ruid) + " ---> " + str(yearCheck.group()) + "\n"
+                    if(str(record.diagnosisYr) != str(yearCheck.group())):
+                        isPositive = False
                 else:
                     isPositive = False
             '''
@@ -130,12 +132,9 @@ def run():
                 #check for data science statistic
             '''
             if(isPositive):
-
-
                 if(record.isPositive):
                     #true Positive
                     truePositives += 1
-                    #recordYr = yew.work(record.content, record.diagnosisYr)
                 else:
                     #false Positive
                     falsePositives += 1
