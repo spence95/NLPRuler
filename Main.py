@@ -82,15 +82,13 @@ def run():
 
     runTrainingSet = input("Run training set? ")
 
-
-
     if(runTrainingSet == "Y"):
         i = 0
         greatestMatched = 0
         masterStr = ""
         yearDiagnoseStr = ""
 
-        trainingSetRecords = rm.getTrainingSetRecords("TrainingSet.txt")
+        trainingSetRecords = rm.getTrainingSetRecords("ValidationSet.txt")
         length = len(trainingSetRecords)
 
         for record in trainingSetRecords:
@@ -98,42 +96,20 @@ def run():
             i = i + 1
             nextRecordText = record.content
             #isPositive = wordBasedRule.run(nextRecordText, "has Multiple Sclerosis")
+            isPositive = False
+            yearCheck = contextRule.run(nextRecordText, phraseList, record.entry_date)
+            if(yearCheck != False):
+                isPositive = True
+                with open("positiveRUIDs.txt", "a") as myfile:
+                    string = str(record.ruid) + " ---> " + yearCheck + "\n"
+                    myfile.write(string)
+                yearDiagnoseStr += str(record.ruid) + " ---> " + str(yearCheck) + "\n"
 
-            isPositive = contextRule.run(nextRecordText, phraseList)
-            yearCheck = ""
-            if(isPositive):
-                yearCheck = yearExtractionRule.run(nextRecordText, 0000)
 
-                if(yearCheck != False):
-                    isPositive = True
-                    with open("positiveRUIDs.txt", "a") as myfile:
-                        string = str(record.ruid) + " ---> " + yearCheck.group() + "\n"
-                        myfile.write(string)
-                    yearDiagnoseStr += str(record.ruid) + " ---> " + str(yearCheck.group()) + "\n"
 
-                else:
-                    isPositive = False
-            '''
-            if(isPositive):
-                matched = phraseListSearchRule.run(nextRecordText, phraseList, percentageRequired)
-                if((matched/categories) < percentageRequired):
-                    isPositive = False
-                    if(record.isPositive):
-                        #false negative
-                        falseNegatives += 1
-                    else:
-                        #true negative
-                        trueNegatives += 1
-                else:
-                    positiveRecords.append(record)
-                    masterStr += str(record.ruid) + " " + str(record.entry_date) + " " + str(isPositive) + "\n"
-                positiveRecords.append(record)
-                masterStr += str(record.ruid) + " " + str(record.entry_date) + " " + str(isPositive) + "\n"
-                #check for data science statistic
-            '''
             if(isPositive):
                 if(record.isPositive):
-                    if(str(record.diagnosisYr) != str(yearCheck.group())):
+                    if(str(record.diagnosisYr) != str(yearCheck)):
                         falsePositives += 1
                     else:
                         truePositives += 1

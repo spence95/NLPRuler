@@ -3,8 +3,8 @@ import re
 import difflib
 
 class YearExtractionRule(Rule):
-    upperLimit = 20
-    lowerLimit = 20
+    upperLimit = 150
+    lowerLimit = 150
 
     def __init__(self, name):
         self.name = name
@@ -24,6 +24,11 @@ class YearExtractionRule(Rule):
         it = re.finditer(yearRegex, record, re.IGNORECASE)
 
         for match in it:
+            regex = r'multiple\ssclerosis|\sms\s}'
+            matches = re.findall(regex, match.group(), re.IGNORECASE)
+            if(len(matches) < 1):
+                continue
+
             specificYrRegex = "(19|20)\d{2}"
             specificYrMatch = re.search(specificYrRegex, match.group(), re.IGNORECASE)
 
@@ -33,6 +38,11 @@ class YearExtractionRule(Rule):
             if(weedOutMatch):
                 continue
 
+            weedOutRegex = "Medical\sDiagnoses\sand\sConditions"
+            weedOutMatch = re.search(weedOutRegex, match.group(), re.IGNORECASE)
+            if(weedOutMatch):
+                continue
+                
             print(match.group())
             datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
             dateMatch = re.search(datesBackRegex, match.group(), re.IGNORECASE)
