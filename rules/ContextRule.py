@@ -5,47 +5,46 @@ import re
 import difflib
 
 class ContextRule(Rule):
-    upperLimit = 150
-    lowerLimit = 150
+    upperLimit = 75
+    lowerLimit = 75
     samenessThreshold = .70
 
     def __init__(self, name):
         self.name = name
 
     #symtomList is a list of lists
-    def run(self, record, symptomList, entry_date):
+    def run(self, record, symptomList, entry_year):
         #matches diagnosis, diagnosed, diagnos or multiple sclerosis or ms and returns the upperlimit amount of characters after and the lowerlimit of characters before
         regex = r'.{0,' + str(self.lowerLimit) + '}diagnos.{0,' + str(self.upperLimit) + '}'
 
-        #regex = r'.{0,' + str(self.lowerLimit) + '}diagnos.{0,' + str(self.upperLimit) + '}|.{0,' + str(self.lowerLimit) + '}multiple\ssclerosis.{0,' + str(self.upperLimit) + '}|.{0,' + str(self.lowerLimit) + '}ms.{0,' + str(self.upperLimit) + '}'
-        #regex = r'.{0,' + str(self.lowerLimit) + '}multiple\ssclerosis.{0,' + str(self.upperLimit) + '}|.{0,' + str(self.lowerLimit) + '}ms.{0,' + str(self.upperLimit) + '}'
-        matches = re.findall(regex, record, re.IGNORECASE)
+        diagnoseMatches = re.findall(regex, record, re.IGNORECASE)
 
-        for match in matches:
+        #get year from entry_date
+        years = []
+
+        for diagnoseMatch in diagnoseMatches:
             #check for negating language here
             #TODO: Use negex package instead of the weak sauce below
             regex = r'\sno.\s|can\'t|cannot|negative'
-            negMatches = re.findall(regex, match)
+            negMatches = re.findall(regex, diagnoseMatch)
             if(len(negMatches) == 0):
                 regex = r'.{0,' + str(self.lowerLimit) + '}multiple\ssclerosis.{0,' + str(self.upperLimit) + '}|.{0,' + str(self.lowerLimit) + '}\sms\s.{0,' + str(self.upperLimit) + '}'
-                matches = re.findall(regex, match, re.IGNORECASE)
+                MSMatches = re.findall(regex, diagnoseMatch, re.IGNORECASE)
 
-                if(len(matches) > 0):
-                    #get year from entry_date
-                    entry_year = int(entry_date[:4])
-                    years = []
-
+                for MSMatch in MSMatches:
+                    ### Relative date wording section ###
                     yearsAgoRegex = "/(\d{1,2})\s+years\s+ago/"
-                    newMatch = re.search(yearsAgoRegex, match, re.IGNORECASE)
+                    newMatch = re.search(yearsAgoRegex, MSMatch, re.IGNORECASE)
                     if(newMatch):
                         yearsAgo = int(newMatch.split(' ')[0])
                         yearsAgoYr = entry_year - yearsAgo
                         years.append(yearsAgoYr)
 
+                    #TODO: last year
 
-
+                    ### Specific year section ###
                     yearRegex = ".{0," + str(self.lowerLimit) + "}(19|20)\d{2}.{0," + str(self.upperLimit) + "}"
-                    it = re.finditer(yearRegex, record, re.IGNORECASE)
+                    it = re.finditer(yearRegex, MSMatch, re.IGNORECASE)
 
                     for match in it:
                         #if DATE[] is in it, ignore it
@@ -57,20 +56,21 @@ class ContextRule(Rule):
                         specificYrRegex = "(19|20)\d{2}"
                         specificYrMatch = re.search(specificYrRegex, match.group(), re.IGNORECASE)
 
-                        datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
-                        dateMatch = re.search(datesBackRegex, match.group(), re.IGNORECASE)
-                        if(dateMatch):
-                            years.append(specificYrMatch.group())
+                        if(specificYrMatch.group() != "" or specificYrMatch.group() is not None):
+                            datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
+                            dateMatch = re.search(datesBackRegex, match.group(), re.IGNORECASE)
+                            if(dateMatch):
+                                years.append(specificYrMatch.group())
 
-                        beganRegex = "(symptoms|symptom)\sbegan"
-                        beganMatch = re.search(beganRegex, match.group(), re.IGNORECASE)
-                        if(beganMatch):
-                            years.append(specificYrMatch.group())
+                            beganRegex = "(symptoms|symptom)\sbegan"
+                            beganMatch = re.search(beganRegex, match.group(), re.IGNORECASE)
+                            if(beganMatch):
+                                years.append(specificYrMatch.group())
 
-                        diagnosRegex = "diagnos."
-                        diagnosMatch = re.search(diagnosRegex, match.group(), re.IGNORECASE)
-                        if(diagnosMatch):
-                            years.append(specificYrMatch.group())
+                            diagnosRegex = "diagnos."
+                            diagnosMatch = re.search(diagnosRegex, match.group(), re.IGNORECASE)
+                            if(diagnosMatch):
+                                years.append(specificYrMatch.group())
 
                     if(len(years) < 1):
                         return False

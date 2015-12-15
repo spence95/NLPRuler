@@ -77,7 +77,7 @@ class RecordsManager():
                                         host='localhost',
                                         database='MFD_MS')
             cursor = cnx.cursor(prepared=True)
-            show_DB = "select ruid, entry_date, content from notes where ruid < 50;"
+            show_DB = "select ruid, entry_date, content from notes LIMIT 50000;"
             cursor.execute(show_DB, multi=True)
             results = cursor.fetchall()
             for result in results:

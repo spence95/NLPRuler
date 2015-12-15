@@ -62,17 +62,15 @@ def run():
     if(runRecordsAnalysis == "Y"):
         for record in records:
             i = i + 1
-            nextRecordText = record.content
-            isPositive = contextRule.run(nextRecordText, phraseList)
-            if(isPositive == True):
-                #take first four char of record.date for year
-                #recordYr = int(record.entry_date[:4])
-                recordYr = record.entry_date.year
-                recordYr = yew.work(nextRecordText, recordYr)
-                masterStr += str(record.ruid) + " " + str(record.entry_date) + " " + str(recordYr) + " " + "\r"
-                positives += 1
-            else:
-                negatives += 1
+            if(record.entry_date is not None):
+                nextRecordText = record.content
+                isPositive = contextRule.run(nextRecordText, phraseList, record.entry_date.year)
+                if(isPositive != False):
+
+                    masterStr += str(record.ruid) + " " + str(record.entry_date) + " " + str(isPositive) + " " + "\r"
+                    positives += 1
+                else:
+                    negatives += 1
             progress = round((i/length) * 100, 2)
             print("Progress: " + str(progress) + "%")
 
@@ -88,7 +86,7 @@ def run():
         masterStr = ""
         yearDiagnoseStr = ""
 
-        trainingSetRecords = rm.getTrainingSetRecords("ValidationSet.txt")
+        trainingSetRecords = rm.getTrainingSetRecords("TotalSet.txt")
         length = len(trainingSetRecords)
 
         for record in trainingSetRecords:
@@ -97,7 +95,8 @@ def run():
             nextRecordText = record.content
             #isPositive = wordBasedRule.run(nextRecordText, "has Multiple Sclerosis")
             isPositive = False
-            yearCheck = contextRule.run(nextRecordText, phraseList, record.entry_date)
+            entry_year = int(record.entry_date[:4])
+            yearCheck = contextRule.run(nextRecordText, phraseList, entry_year)
             if(yearCheck != False):
                 isPositive = True
                 with open("positiveRUIDs.txt", "a") as myfile:
