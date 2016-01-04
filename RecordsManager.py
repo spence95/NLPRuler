@@ -68,7 +68,7 @@ class RecordsManager():
 
         return self.trainingSetRecords
 
-    #manually inputing one record right now until more access on vger1
+    #used in running against unknown diagnosis records
     def getAllRecords(self):
         #open the connection
         try:
