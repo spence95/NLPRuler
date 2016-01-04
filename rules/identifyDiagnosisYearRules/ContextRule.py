@@ -8,6 +8,8 @@ import sys
 class ContextRule(Rule):
     upperLimit = 100
     lowerLimit = 100
+    yearUpperLimit = 155
+    yearLowerLimit = 155
 
     def __init__(self, name):
         self.name = name
@@ -17,6 +19,7 @@ class ContextRule(Rule):
         regex = r'.{0,' + str(self.lowerLimit) + '}diagnos.{0,' + str(self.upperLimit) + '}'
 
         diagnoseMatches = re.findall(regex, record, re.IGNORECASE)
+        MSMatches = []
 
         #get year from entry_date
         years = []
@@ -31,16 +34,14 @@ class ContextRule(Rule):
                 regex = r'.{0,' + str(self.lowerLimit) + '}multiple\ssclerosis.{0,' + str(self.upperLimit) + '}|.{0,' \
                 + str(self.lowerLimit) + '}multiplesclerosis.{0,' + str(self.upperLimit) + '}|.{0,' \
                 + str(self.lowerLimit) + '}\sMS\s.{0,' + str(self.upperLimit) + '}' \
-                + '|.{0,' + str(self.lowerLimit) + '}:MS\s.{0,' + str(self.upperLimit) + '}'
-                #+ '|.{0,' + str(self.lowerLimit) + '}\sMS\..{0,' + str(self.upperLimit) + '}'
+                + '|.{0,' + str(self.lowerLimit) + '}:MS\s.{0,' + str(self.upperLimit) + '}' \
+                + '|.{0,' + str(self.lowerLimit) + '}\sMS\..{0,' + str(self.upperLimit) + '}'
                 MSMatches = re.findall(regex, diagnoseMatch, re.IGNORECASE)
-
                 for MSMatch in MSMatches:
                     ### Relative date wording section ###
                     yearsAgoRegex = "/(\d{1,2})\s+years\s+ago/"
                     newMatch = re.search(yearsAgoRegex, MSMatch, re.IGNORECASE)
                     if(newMatch):
-                        sys.exit("found years ago")
                         yearsAgo = int(newMatch.split(' ')[0])
                         yearsAgoYr = entry_year - yearsAgo
                         years.append(yearsAgoYr)
@@ -48,7 +49,7 @@ class ContextRule(Rule):
                     #TODO: last year
 
                     ### Specific year section ###
-                    yearRegex = ".{0," + str(self.lowerLimit) + "}(19|20)\d{2}.{0," + str(self.upperLimit) + "}"
+                    yearRegex = ".{0," + str(self.yearLowerLimit) + "}(19|20)\d{2}.{0," + str(self.yearUpperLimit) + "}"
                     it = re.finditer(yearRegex, MSMatch, re.IGNORECASE)
 
                     for match in it:
@@ -60,41 +61,53 @@ class ContextRule(Rule):
                         if(weedOutMatch):
                             continue
 
+
                         specificYrRegex = "(19|20)\d{2}"
-                        specificYrMatch = re.search(specificYrRegex, match.group(), re.IGNORECASE)
+                        specificYrMatches = re.finditer(specificYrRegex, match.group(), re.IGNORECASE)
+                        for specificYrMatch in specificYrMatches:
+                            if(specificYrMatch.group() != "" or specificYrMatch.group() is not None):
+                                datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
+                                dateMatch = re.search(datesBackRegex, match.group(), re.IGNORECASE)
+                                if(dateMatch):
+                                    years.append(specificYrMatch.group())
 
-                        if(specificYrMatch.group() != "" or specificYrMatch.group() is not None):
-                            datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
-                            dateMatch = re.search(datesBackRegex, match.group(), re.IGNORECASE)
-                            if(dateMatch):
-                                years.append(specificYrMatch.group())
+                                beganRegex = "(symptoms|symptom)\sbegan"
+                                beganMatch = re.search(beganRegex, match.group(), re.IGNORECASE)
+                                if(beganMatch):
+                                    years.append(specificYrMatch.group())
 
-                            beganRegex = "(symptoms|symptom)\sbegan"
-                            beganMatch = re.search(beganRegex, match.group(), re.IGNORECASE)
-                            if(beganMatch):
-                                years.append(specificYrMatch.group())
+                                diagnosRegex = "diagnos."
+                                diagnosMatch = re.search(diagnosRegex, match.group(), re.IGNORECASE)
+                                if(diagnosMatch):
+                                    years.append(specificYrMatch.group())
 
-                            diagnosRegex = "diagnos."
-                            diagnosMatch = re.search(diagnosRegex, match.group(), re.IGNORECASE)
-                            if(diagnosMatch):
-                                years.append(specificYrMatch.group())
 
-                    if(len(years) > 0):
-                        #find out the most common year repeated, ties are broken by later year
-                        years = sorted(years, key=int)
 
-                        commonYr = 0000
-                        count = 0
-                        for year in years:
-                            inLoopCount = 0
-                            for yearOth in years:
-                                if(year == yearOth):
-                                    inLoopCount += 1
-                            if(inLoopCount > count):
-                                count = inLoopCount
-                                commonYr = year
+            if(len(MSMatches) > 0):
+                #if the specific "diagnosed in" appears before the year than no need for tie breaker, go with that year
+                diagnosedInRegex = "diagnosed\sin\s(19|20)\d{2}"
+                diagnosedInMatch = re.search(diagnosedInRegex, record, re.IGNORECASE)
+                if(diagnosedInMatch):
+                    return diagnosedInMatch.group()[-4:]
 
-                        return commonYr
+
+
+            if(len(years) > 0):
+                #find out the most common year repeated, ties are broken by later year
+                years = sorted(years, key=int)
+
+                commonYr = 0000
+                count = 0
+                for year in reversed(years):
+                    inLoopCount = 0
+                    for yearOth in reversed(years):
+                        if(year == yearOth):
+                            inLoopCount += 1
+                    if(inLoopCount > count):
+                        count = inLoopCount
+                        commonYr = year
+
+                return commonYr
 
 
 

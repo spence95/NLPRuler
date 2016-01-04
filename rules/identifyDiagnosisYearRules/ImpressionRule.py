@@ -35,6 +35,7 @@ class ImpressionRule(Rule):
                         diagnosMatch = re.search(diagnosRegex, impressionMatch.group(), re.IGNORECASE)
 
                         if(diagnosMatch):
+                            #TODO: Can't assume that it's the current entry year, need to search for dating language
                             return str(entry_year)
 
         return False
