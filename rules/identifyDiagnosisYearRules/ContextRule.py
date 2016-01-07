@@ -27,9 +27,8 @@ class ContextRule(Rule):
         for diagnoseMatch in diagnoseMatches:
             #check for negating language here
             #TODO: Use negex package instead of the weak sauce below
-            #regex = r'\sno.\s|can\'t|cannot|negative'
-            #negMatches = re.findall(regex, diagnoseMatch)
-            negMatches = []
+            regex = r'\sno.\s|can\'t|cannot|negative|possible'
+            negMatches = re.findall(regex, diagnoseMatch, re.IGNORECASE)
             if(len(negMatches) == 0):
                 regex = r'.{0,' + str(self.lowerLimit) + '}multiple\ssclerosis.{0,' + str(self.upperLimit) + '}|.{0,' \
                 + str(self.lowerLimit) + '}multiplesclerosis.{0,' + str(self.upperLimit) + '}|.{0,' \
@@ -49,37 +48,38 @@ class ContextRule(Rule):
                     #TODO: last year
 
                     ### Specific year section ###
-                    yearRegex = ".{0," + str(self.yearLowerLimit) + "}(19|20)\d{2}.{0," + str(self.yearUpperLimit) + "}"
-                    it = re.finditer(yearRegex, MSMatch, re.IGNORECASE)
-
-                    for match in it:
+                    yearRegex = ".{0,2}(19|20)\d{2}.{0,2}"
+                    specificYrMatches = re.finditer(yearRegex, MSMatch, re.IGNORECASE)
+                    for specificYrMatch in specificYrMatches:
                         #if DATE[] is in it, ignore it
-                        yearRegex = ".{0,2}(19|20)\d{2}.{0,2}"
-                        preciserYr = re.search(yearRegex, match.group(), re.IGNORECASE)
                         weedOutRegex = "\[|\]"
-                        weedOutMatch = re.search(weedOutRegex, preciserYr.group(), re.IGNORECASE)
+                        weedOutMatch = re.search(weedOutRegex, specificYrMatch.group(), re.IGNORECASE)
                         if(weedOutMatch):
                             continue
 
+                        #take first two and last two chars off of year match
+                        specificYr = specificYrMatch.group()[2:-2]
 
-                        specificYrRegex = "(19|20)\d{2}"
-                        specificYrMatches = re.finditer(specificYrRegex, match.group(), re.IGNORECASE)
-                        for specificYrMatch in specificYrMatches:
-                            if(specificYrMatch.group() != "" or specificYrMatch.group() is not None):
-                                datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
-                                dateMatch = re.search(datesBackRegex, match.group(), re.IGNORECASE)
-                                if(dateMatch):
-                                    years.append(specificYrMatch.group())
+                        datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
+                        dateMatch = re.search(datesBackRegex, MSMatch, re.IGNORECASE)
+                        if(dateMatch):
+                            years.append(specificYr)
 
-                                beganRegex = "(symptoms|symptom)\sbegan"
-                                beganMatch = re.search(beganRegex, match.group(), re.IGNORECASE)
-                                if(beganMatch):
-                                    years.append(specificYrMatch.group())
+                        beganRegex = "(symptoms|symptom)\sbegan"
+                        beganMatch = re.search(beganRegex, MSMatch, re.IGNORECASE)
+                        if(beganMatch):
+                            years.append(specificYr)
 
-                                diagnosRegex = "diagnos."
-                                diagnosMatch = re.search(diagnosRegex, match.group(), re.IGNORECASE)
-                                if(diagnosMatch):
-                                    years.append(specificYrMatch.group())
+                        #look for diagnos-ish words but ignore everything after the end of a sentence
+                        splitMSMatch = MSMatch.split('.')
+                        for splitMatch in splitMSMatch:
+                            diagnosRegex = "diagnos."
+                            diagnosMatch = re.search(diagnosRegex, splitMatch, re.IGNORECASE)
+                            if(diagnosMatch):
+                                yearRegexCheck = re.search(specificYr, splitMatch, re.IGNORECASE)
+                                if(yearRegexCheck):
+                                    years.append(specificYr)
+
 
 
 

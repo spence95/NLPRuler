@@ -1,6 +1,7 @@
 from __future__ import print_function
 import datetime
 import os.path
+import sys
 
 from rules.Rule import Rule
 from RecordsManager import RecordsManager
@@ -42,24 +43,48 @@ def run():
         #to be ordered later for output (we care about earliest diagnosis and amount of times diagnosed)
         masterDict = {}
 
+        # for record in records:
+        #     i = i + 1
+        #     if(record.entry_date is not None):
+        #         nextRecordText = record.content
+        #         isPositive = contextRule.run(nextRecordText, record.entry_date.year)
+        #         if(isPositive != False):
+        #             #if isPositive isn't False than it's the diagnosis year
+        #             diagnosisYr = isPositive
+        #             #if ruid not already in masterDict create the list for it
+        #             if(record.ruid not in masterDict):
+        #                 masterDict[record.ruid] = []
+        #             positiveRecordInfo = [record.entry_date, diagnosisYr]
+        #             masterDict[record.ruid].append(positiveRecordInfo)
+        #             positives += 1
+        #         else:
+        #             negatives += 1
+        #     progress = round((i/length) * 100, 3)
+        #     print("Progress: " + str(progress) + "%")
         for record in records:
             i = i + 1
             if(record.entry_date is not None):
                 nextRecordText = record.content
-                isPositive = contextRule.run(nextRecordText, record.entry_date.year)
-                if(isPositive != False):
+                entry_year = int(str(record.entry_date)[:4])
+                yearCheck = impressionRule.run(nextRecordText, entry_year)
+                if(yearCheck == False):
+                    yearCheck = contextRule.run(nextRecordText, entry_year)
+                #if yearCheck isn't false than it's a year i.e. 1990
+                if(yearCheck != False):
                     #if isPositive isn't False than it's the diagnosis year
-                    diagnosisYr = isPositive
+                    diagnosisYr = yearCheck
                     #if ruid not already in masterDict create the list for it
                     if(record.ruid not in masterDict):
                         masterDict[record.ruid] = []
-                    positiveRecordInfo = [record.entry_date, diagnosisYr]
-                    masterDict[record.ruid].append(positiveRecordInfo)
-                    positives += 1
-                else:
-                    negatives += 1
-            progress = round((i/length) * 100, 3)
-            print("Progress: " + str(progress) + "%")
+                        positiveRecordInfo = [record.entry_date, diagnosisYr]
+                        masterDict[record.ruid].append(positiveRecordInfo)
+                        positives += 1
+                    else:
+                        negatives += 1
+                    progress = round((i/length) * 100, 3)
+                    sys.stdout.write("Script progress: %d%%   \r" % (progress) )
+                    sys.stdout.flush()
+                    #print("Progress: " + str(progress) + "%")
 
         print("Number of positives: " + str(positives))
         print("Number of negatives: " + str(negatives))
@@ -100,14 +125,13 @@ def run():
 
 
     runTrainingSet = input("Run training set? ")
-
+    falseNegStr = ""
     if(runTrainingSet == "Y"):
         #prelim setup stuff
         i = 0
         greatestMatched = 0
         masterStr = ""
         yearDiagnoseStr = ""
-        falseNegStr = ""
         falsePosStr = ""
 
         #gets the training set record with positives and negatives taken from Dr. Davis's excel sheet
@@ -120,9 +144,9 @@ def run():
             nextRecordText = record.content
             isPositive = False
             entry_year = int(record.entry_date[:4])
-            yearCheck = contextRule.run(nextRecordText, entry_year)
+            yearCheck = impressionRule.run(nextRecordText, entry_year)
             if(yearCheck == False):
-                yearCheck = impressionRule.run(nextRecordText, entry_year)
+                yearCheck = contextRule.run(nextRecordText, entry_year)
             #if yearCheck isn't false than it's a year i.e. 1990
             if(yearCheck != False):
                 isPositive = True
@@ -157,7 +181,8 @@ def run():
                     trueNegatives += 1
 
             progress = round((i/length) * 100, 2)
-            print("Progress: " + str(progress) + "%")
+            sys.stdout.write("Script progress: %d%%   \r" % (progress) )
+            sys.stdout.flush()
 
 
 
