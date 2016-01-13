@@ -2,18 +2,20 @@ from __future__ import print_function
 import datetime
 import os.path
 import sys
+import re
 
 from rules.Rule import Rule
+from CalledRecordDiagnoseYr import CalledRecordDiagnoseYr
 from RecordsManager import RecordsManager
 from rules.identifyDiagnosisYearRules.ContextRule import ContextRule
 from rules.identifyDiagnosisYearRules.ImpressionRule import ImpressionRule
+from FinalRecord import FinalRecord
 
 def run():
     foundRecords = 0
     contextRule = ContextRule("ContextRule")
     impressionRule = ImpressionRule("ImpressionRule")
     rm = RecordsManager("connection")
-    positiveRecords = []
 
 
     percentageRequired = .10
@@ -39,85 +41,68 @@ def run():
         records = rm.records
         length = len(records)
 
-        #masterDict stores each positive record with that record's corresponding entry date
-        #to be ordered later for output (we care about earliest diagnosis and amount of times diagnosed)
-        masterDict = {}
 
-        # for record in records:
-        #     i = i + 1
-        #     if(record.entry_date is not None):
-        #         nextRecordText = record.content
-        #         isPositive = contextRule.run(nextRecordText, record.entry_date.year)
-        #         if(isPositive != False):
-        #             #if isPositive isn't False than it's the diagnosis year
-        #             diagnosisYr = isPositive
-        #             #if ruid not already in masterDict create the list for it
-        #             if(record.ruid not in masterDict):
-        #                 masterDict[record.ruid] = []
-        #             positiveRecordInfo = [record.entry_date, diagnosisYr]
-        #             masterDict[record.ruid].append(positiveRecordInfo)
-        #             positives += 1
-        #         else:
-        #             negatives += 1
-        #     progress = round((i/length) * 100, 3)
-        #     print("Progress: " + str(progress) + "%")
+        #array to pass to return to the main script to be combined with other NLP scripts
+        positiveRecords = {}
+
         for record in records:
             i = i + 1
             if(record.entry_date is not None):
-                nextRecordText = record.content
                 entry_year = int(str(record.entry_date)[:4])
-                yearCheck = impressionRule.run(nextRecordText, entry_year)
-                if(yearCheck == False):
-                    yearCheck = contextRule.run(nextRecordText, entry_year)
-                #if yearCheck isn't false than it's a year i.e. 1990
-                if(yearCheck != False):
-                    #if isPositive isn't False than it's the diagnosis year
-                    diagnosisYr = yearCheck
-                    #if ruid not already in masterDict create the list for it
-                    if(record.ruid not in masterDict):
-                        masterDict[record.ruid] = []
-                        positiveRecordInfo = [record.entry_date, diagnosisYr]
-                        masterDict[record.ruid].append(positiveRecordInfo)
-                        positives += 1
+                check = contextRule.run(record, entry_year)
+                if(check == False):
+                    check = impressionRule.run(record, entry_year)
+
+                if(check == False):
+                    negatives += 1
+
+                    #if yearCheck isn't false than it's a year i.e. 1990
+                if(check != False):
+                    positives += 1
+                    if(check.ruid not in positiveRecords):
+                        positiveRecords[check.ruid] = [check]
                     else:
-                        negatives += 1
-                    progress = round((i/length) * 100, 3)
-                    sys.stdout.write("Script progress: %d%%   \r" % (progress) )
-                    sys.stdout.flush()
-                    #print("Progress: " + str(progress) + "%")
+                        positiveRecords[check.ruid].append(check)
+                    with open("/home/suttons/MSDataAnalysis/output/positiveRUIDsFullRecords.txt", "a") as txtFile:
+                        regex = re.compile(r'[\n\r\t]')
+                        regex.sub(' ', check.calledText)
+                        stringLine = str(check.ruid) + "\t" + str(check.entry_date) + "\t" + str(check.calledYear) + "\t" + str(check.calledRule) + "\t" + str(check.calledText) + "\r"
+                        txtFile.write(stringLine)
+            progress = round((i/length) * 100, 2)
+            sys.stdout.write("Script progress: %d%%   \r" % (progress) )
+            sys.stdout.flush()
 
         print("Number of positives: " + str(positives))
         print("Number of negatives: " + str(negatives))
 
-        for ruid in masterDict:
-            #find earliest diagnosis year of the consensus year (the year repeated the most for that patient)
-            #find the consensus year
-            positiveRecordInfos = masterDict[ruid]
-            mostRepeatedDiagnosisYr = 9999
-            count = 0
-            for positiveRecordInfo in positiveRecordInfos:
-                inLoopCount = 0
-                for positiveRecordInfoOth in positiveRecordInfos:
-                    if(positiveRecordInfo[1] == positiveRecordInfoOth[1]):
-                        inLoopCount += 1
-                    if(inLoopCount > count):
-                        count = inLoopCount
-                        mostRepeatedDiagnosisYr = positiveRecordInfo[1]
 
-            #find the earliest date
-            index = 0
-            for positiveRecordInfo in positiveRecordInfos:
-                if(index == 0):
-                    earliestEntryDate = datetime.date(9999, 12, 31)
-                dateData = str(positiveRecordInfo[0]).split("-")
-                recordDate = datetime.date(int(dateData[0]), int(dateData[1]), int(dateData[2]))
-                if(recordDate < earliestEntryDate and positiveRecordInfo[1] == mostRepeatedDiagnosisYr):
-                    earliestEntryDate = recordDate
-                index += 1
 
-            masterStr += "RUID: " + str(ruid) + "\tDiagnosis date: " + str(earliestEntryDate)  + "\tDiagnosis Year: " + str(mostRepeatedDiagnosisYr) + "\tTimes Diagnosis Year Repeated: " + str(count) + "\r"
-            for positiveRecordInfo in positiveRecordInfos:
-                masterStr += "\t" + str(positiveRecordInfo[0]) + " " + str(positiveRecordInfo[1]) + " " + "\r"
+    #find the most frequent year and return that with the ruid
+    finalRecords = []
+    for key in positiveRecords:
+        positiveRecordsForRuid = positiveRecords[key]
+        commonYr = 0
+        count = 0
+        finalRecord = FinalRecord()
+        finalRecord.ruid = positiveRecordsForRuid[0].ruid
+        for record in positiveRecordsForRuid:
+            prevCount = count
+            for othRecord in positiveRecordsForRuid:
+                if(record.calledYear == othRecord.calledYear):
+                    count += 1
+            if(count > prevCount):
+                commonYr = record.calledYear
+        finalRecord.diagnosisYr = commonYr
+        finalRecords.append(finalRecord)
+
+    print("Done!")
+
+
+    return finalRecords
+
+
+
+
 
 
 
@@ -130,7 +115,6 @@ def run():
         #prelim setup stuff
         i = 0
         greatestMatched = 0
-        masterStr = ""
         yearDiagnoseStr = ""
         falsePosStr = ""
 
@@ -141,26 +125,27 @@ def run():
         for record in trainingSetRecords:
 
             i = i + 1
-            nextRecordText = record.content
             isPositive = False
             entry_year = int(record.entry_date[:4])
-            yearCheck = impressionRule.run(nextRecordText, entry_year)
-            if(yearCheck == False):
-                yearCheck = contextRule.run(nextRecordText, entry_year)
+            check = contextRule.run(record, entry_year)
+            if(check == False):
+                check = impressionRule.run(record, entry_year)
             #if yearCheck isn't false than it's a year i.e. 1990
-            if(yearCheck != False):
+            if(check != False):
                 isPositive = True
 
-                with open("/home/suttons/MSDataAnalysis/output/positiveRUIDs.txt", "a") as myfile:
-                    string = str(record.ruid) + " ---> " + yearCheck + "\n"
-                    myfile.write(string)
-                yearDiagnoseStr += str(record.ruid) + " ---> " + str(yearCheck) + "\n"
+                with open("/home/suttons/MSDataAnalysis/output/positiveRUIDs.txt", "a") as csvFile:
+                    regex = re.compile(r'[\n\r\t]')
+                    regex.sub(' ', check.calledText)
+                    stringLine = str(check.ruid) + "\t" + str(check.entry_date) + "\t" + str(check.calledYear) + "\t" + str(check.calledRule) + "\t" + str(check.calledText) + "\r"
+                    csvFile.write(stringLine)
+                yearDiagnoseStr += str(record.ruid) + " ---> " + str(check.calledYear) + "\n"
 
 
 
             if(isPositive):
                 if(record.isPositive):
-                    if(str(record.diagnosisYr) != str(yearCheck)):
+                    if(str(record.diagnosisYr) != str(check.calledYear)):
                         falsePositives += 1
                         falsePosStr += str(record.ruid) + " " + str(record.entry_date) + "\r"
 
@@ -213,8 +198,7 @@ def run():
         print("False Negatives: " + str(falseNegatives))
 
 
-    f = open("/home/suttons/MSDataAnalysis/output/output.txt", 'w')
-    print(masterStr, file = f)
+
 
     f = open("/home/suttons/MSDataAnalysis/output/yearOutput.txt", 'w')
     print(yearDiagnoseStr, file = f)

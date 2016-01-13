@@ -1,4 +1,5 @@
 from rules.Rule import Rule
+from CalledRecordDiagnoseYr import CalledRecordDiagnoseYr
 import nltk
 import nltk.data
 import re
@@ -16,6 +17,9 @@ class ImpressionRule(Rule):
         self.name = name
 
     def run(self, record, entry_year):
+        calledRecord = CalledRecordDiagnoseYr(record.ruid, record.entry_date, record.content)
+        calledRecord.calledRule = self.name
+        record = record.content
         msRegex = r'multiple\ssclerosis|multiplesclerosis|\sms\s|:ms\s'
         ### A lot of the positive records I was missing are the ones that are diagnosed in the visit
 
@@ -85,6 +89,8 @@ class ImpressionRule(Rule):
                         #
                         #             return str(commonYr)
                         if(diagnosMatch):
-                            return str(entry_year)
+                            calledRecord.calledYear = str(entry_year)
+                            calledRecord.calledText = impressionMatch.group() + '\t' + diagnosMatch.group()
+                            return calledRecord
 
         return False

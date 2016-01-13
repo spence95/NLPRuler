@@ -1,0 +1,3 @@
+- Implement the frequency rule for one patient and multiple records
+- put "diagnosed in" back
+
