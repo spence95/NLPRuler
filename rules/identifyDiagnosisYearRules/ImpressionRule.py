@@ -10,6 +10,7 @@ class ImpressionRule(Rule):
     diagnosesLimit = 50
     lowerLimit = 120
     upperLimit = 120
+    msLimit = 25
 
     years = []
 
@@ -20,7 +21,7 @@ class ImpressionRule(Rule):
         calledRecord = CalledRecordDiagnoseYr(record.ruid, record.entry_date, record.content)
         calledRecord.calledRule = self.name
         record = record.content
-        msRegex = r'multiple\ssclerosis|multiplesclerosis|\sms\s|:ms\s'
+        msRegex = r'.{0, ' + str(self.msLimit) + 'multiple\ssclerosis|multiplesclerosis|\sms\s|:ms\s.{0,' + str(self.msLimit) + '}'
         ### A lot of the positive records I was missing are the ones that are diagnosed in the visit
 
         #Search for known significant medical diagnoses and conditions and
@@ -36,61 +37,22 @@ class ImpressionRule(Rule):
             impressionMatch = re.search(impressionRegex, record, re.IGNORECASE)
             if(impressionMatch):
                 msMatch = re.search(msRegex, impressionMatch.group(), re.IGNORECASE)
+
                 if(msMatch):
+                        #look for negating language
+                        # negRegex = r'not|can\'t|will\snot|cannot|can\snot|won\'t|ruledout|ruled\sout'
+                        # negMatch = re.search(negRegex, msMatch.group(), re.IGNORECASE)
+                        #
+                        # if(negMatch):
+                        #     return False
+
                         #at this point, the patient has MS, this only picks out the ones being presently diagnosed
                         diagnosRegex = r'.{0,' + str(self.lowerLimit) + '}diagnos.{0,' + str(self.upperLimit) + '}'
-                        diagnosMatch = re.search(diagnosRegex, impressionMatch.group(), re.IGNORECASE)
+                        diagnosMatch = re.search(diagnosRegex, msMatch.group(), re.IGNORECASE)
 
-                        # for diagnosMatch in diagnosMatches:
-                        #     #look for year and past diagnosis language, if not there,
-                        #     #previous regex shows that the doctor is presently diagnosedInRegex
-                        #     ### Specific year section ###
-                        #     yearRegex = ".{0,2}(19|20)\d{2}.{0,2}"
-                        #     specificYrMatches = re.finditer(yearRegex, diagnosMatch, re.IGNORECASE)
-                        #     for specificYrMatch in specificYrMatches:
-                        #         #if DATE[] is in it, ignore it
-                        #         weedOutRegex = "\[|\]"
-                        #         weedOutMatch = re.search(weedOutRegex, specificYrMatch.group(), re.IGNORECASE)
-                        #         if(weedOutMatch):
-                        #             continue
-                        #
-                        #         #take first two and last two chars off of year match
-                        #         specificYr = specificYrMatch.group()[2:-2]
-                        #
-                        #         datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
-                        #         dateMatch = re.search(datesBackRegex, diagnosMatch, re.IGNORECASE)
-                        #         if(dateMatch):
-                        #             years.append(specificYr)
-                        #
-                        #         beganRegex = "(symptoms|symptom)\sbegan"
-                        #         beganMatch = re.search(beganRegex, diagnosMatch, re.IGNORECASE)
-                        #         if(beganMatch):
-                        #             years.append(specificYr)
-                        #
-                        #         diagnosRegex = "diagnos."
-                        #         diagnosMatch = re.search(diagnosRegex, diagnosMatch, re.IGNORECASE)
-                        #         if(diagnosMatch):
-                        #             years.append(specificYr)
-                        #
-                        #         if(len(years) > 0):
-                        #             #find out the most common year repeated, ties are broken by later year
-                        #             years = sorted(years, key=int)
-                        #
-                        #             commonYr = 0000
-                        #             count = 0
-                        #             for year in reversed(years):
-                        #                 inLoopCount = 0
-                        #                 for yearOth in reversed(years):
-                        #                     if(year == yearOth):
-                        #                         inLoopCount += 1
-                        #                 if(inLoopCount > count):
-                        #                     count = inLoopCount
-                        #                     commonYr = year
-                        #
-                        #             return str(commonYr)
                         if(diagnosMatch):
                             calledRecord.calledYear = str(entry_year)
-                            calledRecord.calledText = impressionMatch.group() + '\t' + diagnosMatch.group()
+                            calledRecord.calledText = msMatch.group() + '\t' + diagnosMatch.group()
                             return calledRecord
 
         return False

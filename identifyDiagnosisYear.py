@@ -77,37 +77,28 @@ def run():
 
 
 
-    #find the most frequent year and return that with the ruid
-    finalRecords = []
-    for key in positiveRecords:
-        positiveRecordsForRuid = positiveRecords[key]
-        commonYr = 0
-        count = 0
-        finalRecord = FinalRecord()
-        finalRecord.ruid = positiveRecordsForRuid[0].ruid
-        for record in positiveRecordsForRuid:
-            prevCount = count
-            for othRecord in positiveRecordsForRuid:
-                if(record.calledYear == othRecord.calledYear):
-                    count += 1
-            if(count > prevCount):
-                commonYr = record.calledYear
-        finalRecord.diagnosisYr = commonYr
-        finalRecords.append(finalRecord)
+        #find the most frequent year and return that with the ruid
+        finalRecords = []
+        for key in positiveRecords:
+            positiveRecordsForRuid = positiveRecords[key]
+            commonYr = 0
+            count = 0
+            finalRecord = FinalRecord()
+            finalRecord.ruid = positiveRecordsForRuid[0].ruid
+            for record in positiveRecordsForRuid:
+                prevCount = count
+                for othRecord in positiveRecordsForRuid:
+                    if(record.calledYear == othRecord.calledYear):
+                        count += 1
+                if(count > prevCount):
+                    commonYr = record.calledYear
+            finalRecord.diagnosisYr = commonYr
+            finalRecords.append(finalRecord)
 
-    print("Done!")
-
-
-    return finalRecords
+        print("Done!")
 
 
-
-
-
-
-
-
-
+        return finalRecords
 
     runTrainingSet = input("Run training set? ")
     falseNegStr = ""
@@ -208,6 +199,8 @@ def run():
 
     f = open("/home/suttons/MSDataAnalysis/output/falsePosOutput.txt", 'w')
     print(falsePosStr, file = f)
+
+    return []
 
 
 
