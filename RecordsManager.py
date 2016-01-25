@@ -13,7 +13,6 @@ class RecordsManager():
 
     def __init__(self, connectionString):
         self.connectionString = connectionString
-        self.getAllRecords()
 
     def getNextRecord(self, index):
         return self.records[index]
@@ -77,7 +76,9 @@ class RecordsManager():
                                         host='localhost',
                                         database='MFD_MS')
             cursor = cnx.cursor(prepared=True)
-            show_DB = "select ruid, entry_date, content from notes LIMIT 150000, 200000;"
+            #Training set pulled out here, just getting the first x  patients' records
+            show_DB = "select  ruid, entry_date, content from notes where ruid in (Select * from (select distinct ruid from notes Limit 200,300) as t);"
+            #show_DB = "select ruid, entry_date, content from notes where (ruid = 194 and entry_date = '2003-11-27') or (ruid = 194 and entry_date = '2008-07-25');"
             cursor.execute(show_DB, multi=True)
             results = cursor.fetchall()
             for result in results:

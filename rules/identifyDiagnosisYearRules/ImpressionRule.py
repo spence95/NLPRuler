@@ -21,12 +21,12 @@ class ImpressionRule(Rule):
         calledRecord = CalledRecordDiagnoseYr(record.ruid, record.entry_date, record.content)
         calledRecord.calledRule = self.name
         record = record.content
-        msRegex = r'.{0, ' + str(self.msLimit) + 'multiple\ssclerosis|multiplesclerosis|\sms\s|:ms\s.{0,' + str(self.msLimit) + '}'
+        msRegex = r'.{0,' + str(self.msLimit) + '}multiple\ssclerosis|multiplesclerosis|\sms\s|:ms\s.{0,' + str(self.msLimit) + '}'
         ### A lot of the positive records I was missing are the ones that are diagnosed in the visit
 
         #Search for known significant medical diagnoses and conditions and
         #confirm that it isn't MS. Then see if the Impression left afterwards is a diagnosis of MS
-        diagnosesRegex = r"medical\sdiagnoses\sand\sconditions.{0," + str(self.diagnosesLimit) + "}|Diagnosis:.{0," + str(self.diagnosesLimit) + "}"
+        diagnosesRegex = r'medical\sdiagnoses\sand\sconditions.{0,' + str(self.diagnosesLimit) + '}|Diagnosis:.{0,' + str(self.diagnosesLimit) + '}'
         diagnosesMatch = re.search(diagnosesRegex, record, re.IGNORECASE)
         if(diagnosesMatch):
             msMatch = re.search(msRegex, diagnosesMatch.group(), re.IGNORECASE)

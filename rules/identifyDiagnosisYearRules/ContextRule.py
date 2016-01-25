@@ -1,3 +1,4 @@
+from datetime import date
 from collections import OrderedDict
 from rules.Rule import Rule
 from CalledRecordDiagnoseYr import CalledRecordDiagnoseYr
@@ -7,6 +8,7 @@ import nltk.data
 import re
 import difflib
 import sys
+
 
 class ContextRule(Rule):
     upperLimit = 100
@@ -20,7 +22,7 @@ class ContextRule(Rule):
     + '\sMS\s.{0,' + str(smallBoundsLimit) + '}' \
     + '|:MS\s.{0,' + str(smallBoundsLimit) + '}' \
     + '|\sMS-.{0,' + str(smallBoundsLimit) + '}' \
-    + '|\sMS\.(?!\s\*\*NAME).{0,' + str(smallBoundsLimit) + '}'
+    + '|\sMS\.(?!\s*\*\*NAME).{0,' + str(smallBoundsLimit) + '}'
 
     def __init__(self, name):
         self.name = name
@@ -51,7 +53,7 @@ class ContextRule(Rule):
                 + str(self.lowerLimit) + '}multiplesclerosis|.{0,' \
                 + str(self.lowerLimit) + '}\sMS\s' \
                 + '|.{0,' + str(self.lowerLimit) + '}:MS\s' \
-                + '|.{0,' + str(self.lowerLimit) + '}\sMS\.(?!\s\*\*NAME)'
+                + '|.{0,' + str(self.lowerLimit) + '}\sMS\.(?!\s*\*\*NAME)'
                 beforeMSMatches = re.findall(beforeMSRegex, diagnoseMatch, re.IGNORECASE)
                 for beforeMSMatch in beforeMSMatches:
                     #if the specific "diagnosed in" appears before the year than no need for tie breaker, go with that year
@@ -96,7 +98,7 @@ class ContextRule(Rule):
                 + str(self.lowerLimit) + '}multiplesclerosis.{0,' + str(self.upperLimit) + '}|.{0,' \
                 + str(self.lowerLimit) + '}\sMS\s.{0,' + str(self.upperLimit) + '}' \
                 + '|.{0,' + str(self.lowerLimit) + '}:MS\s.{0,' + str(self.upperLimit) + '}' \
-                + '|.{0,' + str(self.lowerLimit) + '}\sMS\.(?!\s\*\*NAME).{0,' + str(self.upperLimit) + '}'
+                + '|.{0,' + str(self.lowerLimit) + '}\sMS\.(?!\s*\*\*NAME).{0,' + str(self.upperLimit) + '}'
                 MSMatches = re.findall(regex, diagnoseMatch, re.IGNORECASE)
                 for MSMatch in MSMatches:
                     #if the phrase "Known Significant Medical Diagnoses and Conditions:" appears in the match
@@ -106,13 +108,27 @@ class ContextRule(Rule):
                     if(knownDiagnosesMatch):
                         knownMSMatch = re.search(self.smallerBoundsMSRegex, MSMatch, re.IGNORECASE)
                         if(knownMSMatch):
-                            yearRegex = "(19|20)\d{2}"
+                            yearRegex = "(19|20|\')\d{2}"
                             specificYrMatch = re.search(yearRegex, knownMSMatch.group())
                             if(specificYrMatch):
                                 specificYr = specificYrMatch.group()
-                                calledRecord.calledYear = specificYr
-                                calledRecord.calledText = knownMSMatch.group()
-                                return calledRecord
+
+                                #don't take a year after this certain phrase because it gohn' be wrong
+                                if(knownMSMatch.group().find("Operative and Invasive") > knownMSMatch.group().find(specificYr) or knownMSMatch.group().find("Operative and Invasive") == -1):
+
+                                    #if the year is something like '94 we have to figure out if that means 1994 or 2094
+                                    milDecider = int(str(date.today().year)[-2:])
+                                    if("'" in specificYr):
+                                        if(int(specificYr[-2:]) > milDecider):
+                                            specificYr = "19" + specificYr[-2:]
+                                        else:
+                                            specificYr = "20" + specificYr[-2:]
+
+
+
+                                    calledRecord.calledYear = specificYr
+                                    calledRecord.calledText = knownMSMatch.group()
+                                    return calledRecord
 
                     splitMSMatch = MSMatch.split('.')
                     for splitMatch in splitMSMatch:
@@ -140,13 +156,13 @@ class ContextRule(Rule):
                         if(newMatch):
                             yearsAgo = int(newMatch.group().split(' ')[0])
                             yearsAgoYr = entry_year - yearsAgo
-                            calledMap = {'calledYear': yearsAgoYr, 'calledText': MSMatch}
+                            calledMap = {'calledYear': str(yearsAgoYr), 'calledText': MSMatch}
                             yearMaps.append(calledMap)
 
                         #TODO: last year
 
                         ### Specific year section ###
-                        yearRegex = ".{0,2}(19|20)\d{2}.{0,2}"
+                        yearRegex = ".{0,2}(19|20|\')\d{2}.{0,2}"
                         specificYrMatches = re.finditer(yearRegex, splitMatch, re.IGNORECASE)
                         for specificYrMatch in specificYrMatches:
                             #if DATE[] is in it, ignore it
@@ -161,32 +177,41 @@ class ContextRule(Rule):
                             if(charAfterYr == '\'' or charAfterYr == 's'):
                                 continue
 
-                            yearRegex = "(19|20)\d{2}"
+                            yearRegex = "(19|20|\')\d{2}"
                             specificYr = re.search(yearRegex, specificYrMatch.group()).group()
 
+                            if(splitMatch.find("Operative and Invasive") > splitMatch.find(specificYr) or splitMatch.find("Operative and Invasive") == -1):
+                                #if the year is something like '94 we have to figure out if that means 1994 or 2094
+                                milDecider = int(str(date.today().year)[-2:])
+                                if("'" in specificYr):
+                                    if(int(specificYr[-2:]) > milDecider):
+                                        specificYr = "19" + specificYr[-2:]
+                                    else:
+                                        specificYr = "20" + specificYr[-2:]
 
-                            datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
-                            dateMatch = re.search(datesBackRegex, splitMatch, re.IGNORECASE)
-                            if(dateMatch):
-                                calledMap = {'calledYear': specificYr, 'calledText': MSMatch}
-                                yearMaps.append(calledMap)
 
-                            beganRegex = "(symptoms|symptom)\sbegan"
-                            beganMatch = re.search(beganRegex, splitMatch, re.IGNORECASE)
-                            if(beganMatch):
-                                calledMap = {'calledYear': specificYr, 'calledText': MSMatch}
-                                yearMaps.append(calledMap)
+                                datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
+                                dateMatch = re.search(datesBackRegex, splitMatch, re.IGNORECASE)
+                                if(dateMatch):
+                                    calledMap = {'calledYear': str(specificYr), 'calledText': MSMatch}
+                                    yearMaps.append(calledMap)
 
-                            #look for diagnos-ish words but ignore everything after the end of a sentence
-                            splitMSMatch = splitMatch.split('.')
-                            for splitMatchDiag in splitMSMatch:
-                                diagnosRegex = "diagnos."
-                                diagnosMatch = re.search(diagnosRegex, splitMatchDiag, re.IGNORECASE)
-                                if(diagnosMatch):
-                                    yearRegexCheck = re.search(specificYr, splitMatchDiag, re.IGNORECASE)
-                                    if(yearRegexCheck):
-                                        calledMap = {'calledYear': specificYr, 'calledText': splitMatch}
-                                        yearMaps.append(calledMap)
+                                beganRegex = "(symptoms|symptom)\sbegan"
+                                beganMatch = re.search(beganRegex, splitMatch, re.IGNORECASE)
+                                if(beganMatch):
+                                    calledMap = {'calledYear': str(specificYr), 'calledText': MSMatch}
+                                    yearMaps.append(calledMap)
+
+                                #look for diagnos-ish words but ignore everything after the end of a sentence
+                                splitMSMatch = splitMatch.split('.')
+                                for splitMatchDiag in splitMSMatch:
+                                    diagnosRegex = "diagnos."
+                                    diagnosMatch = re.search(diagnosRegex, splitMatchDiag, re.IGNORECASE)
+                                    if(diagnosMatch):
+                                        yearRegexCheck = re.search(specificYr, splitMatchDiag, re.IGNORECASE)
+                                        if(yearRegexCheck):
+                                            calledMap = {'calledYear': str(specificYr), 'calledText': splitMatch}
+                                            yearMaps.append(calledMap)
 
 
 

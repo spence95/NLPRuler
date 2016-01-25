@@ -49,9 +49,11 @@ def run():
             i = i + 1
             if(record.entry_date is not None):
                 entry_year = int(str(record.entry_date)[:4])
-                check = contextRule.run(record, entry_year)
+                #check = contextRule.run(record, entry_year)
+                check = impressionRule.run(record, entry_year)
                 if(check == False):
-                    check = impressionRule.run(record, entry_year)
+                    #check = impressionRule.run(record, entry_year)
+                    check = contextRule.run(record, entry_year)
 
                 if(check == False):
                     negatives += 1
@@ -79,21 +81,72 @@ def run():
 
         #find the most frequent year and return that with the ruid
         finalRecords = []
+
+
+
         for key in positiveRecords:
+            #used to throw out records that have multiple different diagnosis dates
+            countList = []
             positiveRecordsForRuid = positiveRecords[key]
             commonYr = 0
             count = 0
             finalRecord = FinalRecord()
             finalRecord.ruid = positiveRecordsForRuid[0].ruid
+
+            years = []
             for record in positiveRecordsForRuid:
-                prevCount = count
-                for othRecord in positiveRecordsForRuid:
-                    if(record.calledYear == othRecord.calledYear):
+
+                #build a list of years for this record i.e. [1976, 1976] or [1992, 1992, 1995, 1995]
+                years.append(record.calledYear)
+
+            #order the list
+            years = sorted(years, key=int, reverse=True)
+            #count first item, check if next item is same, if it is incremnt count, if not add count to countList and add one to count
+            countList = []
+            #make a distinct set of years
+            distinctYears = list(set(years))
+            distinctYears = sorted(distinctYears, key=int, reverse=True)
+            #remove years that are close together from distinct list
+            index = 0
+            for distYear in distinctYears:
+                for distYearOth in distinctYears:
+                    if(distYear != distYearOth):
+                        if(abs(int(distYear) - int(distYearOth)) <= 3):
+                            del distinctYears[index]
+                index += 1
+
+            #make a list of counting, if the lowest element in count list is lower than all other elements, we good
+            highestCount = 0
+            commonYr = 0
+            for distYear in distinctYears:
+                count = 0
+                for year in years:
+                    if(abs(int(year) - int(distYear)) <= 3):
                         count += 1
-                if(count > prevCount):
-                    commonYr = record.calledYear
-            finalRecord.diagnosisYr = commonYr
-            finalRecords.append(finalRecord)
+                if(count > highestCount):
+                    highestCount = count
+                    commonYr = distYear
+                countList.append(count)
+
+
+
+
+
+            #check the length countlist i.e. [2] or [2, 2]
+            #if the length is one, we're good
+            if(len(countList) == 1):
+                finalRecord.diagnosisYr = commonYr
+                finalRecords.append(finalRecord)
+            else:
+                #order the countlist
+                countList = sorted(countList, key=int, reverse=True)
+                #if the first item is greater than the second item we're good
+                if(countList[0] > countList[1]):
+                    finalRecord.diagnosisYr = commonYr
+                    finalRecords.append(finalRecord)
+                #if the first most common and the next most common are a tie but within a few years, take the earlier one and call it good
+                #otherwise we ain't good
+
 
         print("Done!")
 
