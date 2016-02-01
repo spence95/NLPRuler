@@ -105,8 +105,8 @@ class RecordsManager():
     def getRecordsForRuid(ruid, sqlStatement):
         meds = []
         try:
-            cnx = mysql.connector.connect(user='suttons',
-                                        password='gi*JOE=123',
+            cnx = mysql.connector.connect(user=self.username,
+                                        password=self.password,
                                         host='localhost',
                                         database='MFD_MS')
             cursor = cnx.cursor(prepared=True)
