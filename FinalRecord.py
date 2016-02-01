@@ -1,3 +1,4 @@
+from Record import Record
 
 class FinalRecord():
     ruid = 0

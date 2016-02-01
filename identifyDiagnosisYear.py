@@ -11,19 +11,10 @@ from rules.identifyDiagnosisYearRules.ContextRule import ContextRule
 from rules.identifyDiagnosisYearRules.ImpressionRule import ImpressionRule
 from FinalRecord import FinalRecord
 
-def run():
-    foundRecords = 0
+def run(records):
+    #setup info
     contextRule = ContextRule("ContextRule")
     impressionRule = ImpressionRule("ImpressionRule")
-    rm = RecordsManager("connection")
-
-
-    percentageRequired = .10
-
-    i = 0
-    greatestMatched = 0
-    masterStr = ""
-    yearDiagnoseStr = ""
 
     trueNegatives = 0
     truePositives = 0
@@ -32,128 +23,146 @@ def run():
 
     positives = 0
     negatives = 0
+    length = len(records)
 
-    #This is running the analysis against records of unknown diagnosis, it's testing the algorithm out for real
-    runRecordsAnalysis = input("Run records analysis? ")
+    #array to pass to return to the main script to be combined with other NLP scripts
+    positiveRecords = {}
 
-    if(runRecordsAnalysis == "Y"):
-        rm.getAllRecords()
-        records = rm.records
-        length = len(records)
+    finalRecords = []
 
-
-        #array to pass to return to the main script to be combined with other NLP scripts
-        positiveRecords = {}
-
-        for record in records:
-            i = i + 1
-            if(record.entry_date is not None):
-                entry_year = int(str(record.entry_date)[:4])
-                #check = contextRule.run(record, entry_year)
+    i = 0
+    for record in records:
+        i = i + 1
+        if(record.entry_date is not None):
+            entry_year = int(str(record.entry_date)[:4])
+            #check becomes False or a year
+            #contextrule uses a lot of regex to narrow down the year
+            check = contextRule.run(record, entry_year)
+            if(check == False):
+                #impressionrule exists specifically to call out records where the patients
+                #is diagnosed in the visit
                 check = impressionRule.run(record, entry_year)
-                if(check == False):
-                    #check = impressionRule.run(record, entry_year)
-                    check = contextRule.run(record, entry_year)
 
-                if(check == False):
-                    negatives += 1
+            if(check == False):
+                negatives += 1
 
-                    #if yearCheck isn't false than it's a year i.e. 1990
-                if(check != False):
-                    positives += 1
+            #if yearCheck isn't false than it's a year i.e. 1990
+            if(check != False):
+                positives += 1
+                if(check.hardCall):
+                    #create final record and append to finalRecords here since hardCall is all like, do it now!
+                    finalRecord = FinalRecord()
+                    finalRecord.ruid = record.ruid
+                    #make sure it isn't already there
+                    notInFinalRecords = True
+                    for record in finalRecords:
+                        if(record.ruid == finalRecord.ruid):
+                            notInFinalRecords = False
+                    if(notInFinalRecords):
+                        finalRecord.diagnosisYr = check.calledYear
+                        finalRecords.append(finalRecord)
+                else:
+                    #if ruid already seen, pair it with previous info
                     if(check.ruid not in positiveRecords):
                         positiveRecords[check.ruid] = [check]
                     else:
                         positiveRecords[check.ruid].append(check)
-                    with open("/home/suttons/MSDataAnalysis/output/positiveRUIDsFullRecords.txt", "a") as txtFile:
-                        regex = re.compile(r'[\n\r\t]')
-                        regex.sub(' ', check.calledText)
-                        stringLine = str(check.ruid) + "\t" + str(check.entry_date) + "\t" + str(check.calledYear) + "\t" + str(check.calledRule) + "\t" + str(check.calledText) + "\r"
-                        txtFile.write(stringLine)
-            progress = round((i/length) * 100, 2)
-            sys.stdout.write("Script progress: %d%%   \r" % (progress) )
-            sys.stdout.flush()
+                #a file to help understand what's happening during the analysis
+                with open("/home/suttons/MSDataAnalysis/output/positiveRUIDsFullRecordsDiagnoseYr.txt", "a") as txtFile:
+                    regex = re.compile(r'[\n\r\t]')
+                    regex.sub(' ', check.calledText)
+                    stringLine = str(check.ruid) + "\t" + str(check.entry_date) + "\t" + str(check.calledYear) + "\t" + str(check.calledRule) + "\t" + str(check.calledText) + "\r"
+                    txtFile.write(stringLine)
 
-        print("Number of positives: " + str(positives))
-        print("Number of negatives: " + str(negatives))
+        #show the progress of the script
+        progress = round((i/length) * 100, 2)
+        sys.stdout.write("Identifying diagnosis years... %d%%   \r" % (progress) )
+        sys.stdout.flush()
 
-
-
-        #find the most frequent year and return that with the ruid
-        finalRecords = []
+    print("Number of positives: " + str(positives))
+    print("Number of negatives: " + str(negatives))
 
 
 
-        for key in positiveRecords:
-            #used to throw out records that have multiple different diagnosis dates
-            countList = []
-            positiveRecordsForRuid = positiveRecords[key]
-            commonYr = 0
+    #find the most frequent year and return that with the ruid
+    for key in positiveRecords:
+        #used to throw out records that have multiple different diagnosis dates
+        countList = []
+        positiveRecordsForRuid = positiveRecords[key]
+        commonYr = 0
+        count = 0
+        finalRecord = FinalRecord()
+        finalRecord.ruid = positiveRecordsForRuid[0].ruid
+
+
+        years = []
+        for record in positiveRecordsForRuid:
+
+            #build a list of years for this record i.e. [1976, 1976] or [1992, 1992, 1995, 1995]
+            years.append(record.calledYear)
+
+        #order the list
+        years = sorted(years, key=int, reverse=True)
+        #count first item, check if next item is same, if it is incremnt count, if not add count to countList and add one to count
+        countList = []
+        #make a distinct set of years
+        distinctYears = list(set(years))
+        distinctYears = sorted(distinctYears, key=int, reverse=True)
+        #remove years that are close together from distinct list
+        index = 0
+        for distYear in distinctYears:
+            for distYearOth in distinctYears:
+                if(distYear != distYearOth):
+                    if(abs(int(distYear) - int(distYearOth)) <= 3):
+                        del distinctYears[index]
+            index += 1
+
+        #make a list of counting, if the lowest element in count list is lower than all other elements, we good
+        highestCount = 0
+        commonYr = 0
+        for distYear in distinctYears:
             count = 0
-            finalRecord = FinalRecord()
-            finalRecord.ruid = positiveRecordsForRuid[0].ruid
-
-            years = []
-            for record in positiveRecordsForRuid:
-
-                #build a list of years for this record i.e. [1976, 1976] or [1992, 1992, 1995, 1995]
-                years.append(record.calledYear)
-
-            #order the list
-            years = sorted(years, key=int, reverse=True)
-            #count first item, check if next item is same, if it is incremnt count, if not add count to countList and add one to count
-            countList = []
-            #make a distinct set of years
-            distinctYears = list(set(years))
-            distinctYears = sorted(distinctYears, key=int, reverse=True)
-            #remove years that are close together from distinct list
-            index = 0
-            for distYear in distinctYears:
-                for distYearOth in distinctYears:
-                    if(distYear != distYearOth):
-                        if(abs(int(distYear) - int(distYearOth)) <= 3):
-                            del distinctYears[index]
-                index += 1
-
-            #make a list of counting, if the lowest element in count list is lower than all other elements, we good
-            highestCount = 0
-            commonYr = 0
-            for distYear in distinctYears:
-                count = 0
-                for year in years:
-                    if(abs(int(year) - int(distYear)) <= 3):
-                        count += 1
-                if(count > highestCount):
-                    highestCount = count
-                    commonYr = distYear
-                countList.append(count)
+            for year in years:
+                if(abs(int(year) - int(distYear)) <= 3):
+                    count += 1
+            if(count > highestCount):
+                highestCount = count
+                commonYr = distYear
+            countList.append(count)
 
 
-
-
-
-            #check the length countlist i.e. [2] or [2, 2]
-            #if the length is one, we're good
-            if(len(countList) == 1):
+        #check the length countlist i.e. [2] or [2, 2]
+        #if the length is one, we're good
+        if(len(countList) == 1):
+            #make sure ruid isn't already in finalRecords
+            notInFinalRecords = True
+            for record in finalRecords:
+                if(record.ruid == finalRecord.ruid):
+                    notInFinalRecords = False
+            if(notInFinalRecords):
                 finalRecord.diagnosisYr = commonYr
                 finalRecords.append(finalRecord)
-            else:
-                #order the countlist
-                countList = sorted(countList, key=int, reverse=True)
-                #if the first item is greater than the second item we're good
-                if(countList[0] > countList[1]):
+        else:
+            #order the countlist
+            countList = sorted(countList, key=int, reverse=True)
+            #if the first item is greater than the second item we're good
+            if(countList[0] > countList[1]):
+                #make sure ruid isn't already in finalRecords
+                notInFinalRecords = True
+                for record in finalRecords:
+                    if(record.ruid == finalRecord.ruid):
+                        notInFinalRecords = False
+                if(notInFinalRecords):
                     finalRecord.diagnosisYr = commonYr
                     finalRecords.append(finalRecord)
-                #if the first most common and the next most common are a tie but within a few years, take the earlier one and call it good
-                #otherwise we ain't good
 
 
-        print("Done!")
+    print("Done with Diagnosis years!")
+    return finalRecords
 
-
-        return finalRecords
-
-    runTrainingSet = input("Run training set? ")
+    #runTrainingSet = input("Run training set? ")
+    #training set turned off for now
+    runTrainingSet = "N"
     falseNegStr = ""
     if(runTrainingSet == "Y"):
         #prelim setup stuff
@@ -254,8 +263,3 @@ def run():
     print(falsePosStr, file = f)
 
     return []
-
-
-
-    #print("Amount of Positive Records " + str(len(positiveRecords)))
-    #print("Greatest amount matched: " + str(greatestMatched))

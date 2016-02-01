@@ -6,3 +6,5 @@ class CalledRecordDiagnoseYr(Record):
     #Called text is the snippet of text that made us call the year we did
     calledText = ""
     calledRule = ""
+    #hardCall is used to skip all other indicators for a year since the one we just found is perfect.
+    hardCall = False

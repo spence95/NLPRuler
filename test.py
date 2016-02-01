@@ -1,37 +1,46 @@
-highestCount = 0
-commonYr = 0
-countList = []
-years = [1994, 1993, 1994, 1994, 2009, 2009, 2010, 2009]
-#years = [1994, 1994, 1998, 2009]
-distinctYears = list(set(years))
-distinctYears = sorted(distinctYears, key=int, reverse=True)
-print(distinctYears)
-#remove years that are close together from distinct list
-index = 0
-for distYear in distinctYears:
-    for distYearOth in distinctYears:
-        if(distYear != distYearOth):
-            if(abs(int(distYear) - int(distYearOth)) <= 3):
-                print("Deleting: " + str(distinctYears[index]))
-                del distinctYears[index]
-    index += 1
+import re
+import mysql.connector
+from mysql.connector import errorcode
 
-print(distinctYears)
 
-for distYear in distinctYears:
-    count = 0
-    print("loop " + str(count))
-    for year in years:
-        print("Comparison: " + str(distYear) + " " + str(year))
-        if(abs(int(year) - int(distYear)) <= 3):
-            count += 1
-    print(str(count))
-    if(count > highestCount):
-        highestCount = count
-        commonYr = distYear
-    countList.append(count)
-countList = sorted(countList, key=int, reverse=True)
-print(countList)
+def getMedRecords(ruid):
+    meds = []
+    try:
+        cnx = mysql.connector.connect(user='suttons',
+                                    password='gi*JOE=123',
+                                    host='localhost',
+                                    database='MFD_MS')
+        cursor = cnx.cursor(prepared=True)
+        #Training set pulled out here, just getting the first x  patients' records
+        show_DB = "select  med from meds where ruid = " + str(ruid) + ";"
+        cursor.execute(show_DB, multi=True)
+        results = cursor.fetchall()
+        for result in results:
+            meds.append(result[0])
 
-print(commonYr)
-print(highestCount)
+    except mysql.connector.Error as err:
+      if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+        print("Something is wrong with your user name or password")
+      elif err.errno == errorcode.ER_BAD_DB_ERROR:
+        print("Database does not exist")
+      else:
+        print(err)
+    else:
+      cnx.close()
+
+    return meds
+
+
+meds = getMedRecords(219)
+for medName in meds:
+    recordContent = """---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **NAME[AAA BBB] VUH#: **ID-NUM **NAME[YYY M ZZZ] , M.D.**DATE[Jan 08 2007]HISTORY OF PRESENT ILLNESS: The patient is a **AGE[in 60s]-year-old female who returnsto clinic today for follow-up complaining of chiggers. She was working outin her yard over the weekend. She received multiple bites on the lowerextremities and upper extremities. She had issues in the past. She deniesany fevers, chills, or redness. PHYSICAL EXAMINATION: Examination reveals multiple inflamed papules on thelower extremities consistent with arthropod bites. No streaking or erythemato suggest cellulitis. No foul drainage. ASSESSMENT/PLAN: Insect bites consistent with chiggers. Started onover-the-counter Medrol Dosepak 60 mg IM times one. The patient's depressionis currently well-controlled. This has always relieved her chigger bitesthe best in the past. She will continue the Benadryl Dr. **NAME[XXX] put her on atnight with Pepcid for extreme itching.  **NAME[YYY M ZZZ] , M.D.JEP:MJTE/jdDD: **DATE[Jan 10 2007] 20:49DT: **DATE[Jan 11 2007] 13:31 |
++--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"""
+    medNameReal = medName.decode("utf-8").strip()
+    medRegex =  r'' + medNameReal
+    print(medRegex)
+    print(len(medRegex))
+    medFinds = re.findall(medRegex, recordContent, re.IGNORECASE)
+    print(medFinds)

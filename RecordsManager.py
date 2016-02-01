@@ -4,6 +4,8 @@ import mysql.connector
 from mysql.connector import errorcode
 
 class RecordsManager():
+    username = ""
+    password = ""
     connectionString = ""
     records = []
     trainingSetRecords = []
@@ -11,16 +13,18 @@ class RecordsManager():
     trainingSetActualNegatives = 0
     ruidLimit = 500
 
-    def __init__(self, connectionString):
+    def __init__(self, connectionString, username, password):
         self.connectionString = connectionString
+        self.username = username
+        self.password = password
 
     def getNextRecord(self, index):
         return self.records[index]
 
     def getTrainingSetRecords(self, fileName):
         try:
-            cnx = mysql.connector.connect(user='suttons',
-                                            password='gi*JOE=123',
+            cnx = mysql.connector.connect(user=self.username,
+                                            password=self.password,
                                             host='localhost',
                                             database='MFD_MS')
             cursor = cnx.cursor(prepared=True)
@@ -71,14 +75,14 @@ class RecordsManager():
     def getAllRecords(self):
         #open the connection
         try:
-            cnx = mysql.connector.connect(user='suttons',
-                                        password='gi*JOE=123',
+            cnx = mysql.connector.connect(user=self.username,
+                                        password=self.password,
                                         host='localhost',
                                         database='MFD_MS')
             cursor = cnx.cursor(prepared=True)
             #Training set pulled out here, just getting the first x  patients' records
-            show_DB = "select  ruid, entry_date, content from notes where ruid in (Select * from (select distinct ruid from notes Limit 200,300) as t);"
-            #show_DB = "select ruid, entry_date, content from notes where (ruid = 194 and entry_date = '2003-11-27') or (ruid = 194 and entry_date = '2008-07-25');"
+            show_DB = "select  ruid, entry_date, content from notes where ruid in (Select * from (select distinct ruid from notes Limit 200) as t);"
+            #show_DB = "select ruid, entry_date, content from notes where (ruid = 383)"
             cursor.execute(show_DB, multi=True)
             results = cursor.fetchall()
             for result in results:
@@ -97,3 +101,30 @@ class RecordsManager():
             print(err)
         else:
           cnx.close()
+
+    def getRecordsForRuid(ruid, sqlStatement):
+        meds = []
+        try:
+            cnx = mysql.connector.connect(user='suttons',
+                                        password='gi*JOE=123',
+                                        host='localhost',
+                                        database='MFD_MS')
+            cursor = cnx.cursor(prepared=True)
+            #Training set pulled out here, just getting the first x  patients' records
+
+            cursor.execute(sqlStatement, multi=True)
+            results = cursor.fetchall()
+            for result in results:
+                meds.append(result[0])
+
+        except mysql.connector.Error as err:
+          if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            print("Something is wrong with your user name or password")
+          elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            print("Database does not exist")
+          else:
+            print(err)
+        else:
+          cnx.close()
+
+        return meds
