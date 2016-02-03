@@ -102,8 +102,8 @@ class RecordsManager():
         else:
           cnx.close()
 
-    def getRecordsForRuid(ruid, sqlStatement):
-        meds = []
+    def getRecordsForRuid(self, sqlStatement):
+        results = []
         try:
             cnx = mysql.connector.connect(user=self.username,
                                         password=self.password,
@@ -111,11 +111,12 @@ class RecordsManager():
                                         database='MFD_MS')
             cursor = cnx.cursor(prepared=True)
             #Training set pulled out here, just getting the first x  patients' records
-
+            sqlStatement = "Select ruid, entry_date, content from notes " + sqlStatement
             cursor.execute(sqlStatement, multi=True)
-            results = cursor.fetchall()
-            for result in results:
-                meds.append(result[0])
+            dbResults = cursor.fetchall()
+            for result in dbResults:
+                record = Record(result[0], result[1], result[2])
+                results.append(record)
 
         except mysql.connector.Error as err:
           if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
@@ -127,4 +128,4 @@ class RecordsManager():
         else:
           cnx.close()
 
-        return meds
+        return results
