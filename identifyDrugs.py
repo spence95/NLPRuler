@@ -11,7 +11,7 @@ from rules.identifyDrugYearRules.ContextRule import ContextRule
 
 
 #def run(records, finalRecords):
-def run(records):
+def run(rm, records):
     contextRule = ContextRule("ContextRule")
     totalMeds = {}
     ruids = []
@@ -71,8 +71,8 @@ def run(records):
 def getMedRecords(ruid):
     meds = []
     try:
-        cnx = mysql.connector.connect(user='suttons',
-                                    password='gi*JOE=123',
+        cnx = mysql.connector.connect(user=rm.username,
+                                    password=rm.password,
                                     host='localhost',
                                     database='MFD_MS')
         cursor = cnx.cursor(prepared=True)

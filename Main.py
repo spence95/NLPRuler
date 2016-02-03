@@ -29,7 +29,7 @@ def run():
     #identifyDrugs.run(records)
 
     #run the symptoms analysis
-    identifySymptoms.run(finalRecords, rm)
+    #identifySymptoms.run(finalRecords, rm)
 
     ### output all of our info from all the analysis into a tab-delimited text file ###
     finalStr = "RUID\tDiagnosis Year\r"
