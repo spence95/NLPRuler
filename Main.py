@@ -22,11 +22,9 @@ def run():
 
     #run the diagnosis year analysis (this object pertains to CalledRecordDiagnoseYr class)
     finalRecords = identifyDiagnosisYear.run(records)
-    #finalRecords = []
 
     #run the drugs analysis
-    #identifyDrugs.run(records, finalRecords)
-    #identifyDrugs.run(records)
+    finalRecords = identifyDrugs.run(rm, records, finalRecords)
 
     #run the symptoms analysis
     #identifySymptoms.run(finalRecords, rm)
@@ -35,6 +33,10 @@ def run():
     finalStr = "RUID\tDiagnosis Year\r"
     for record in finalRecords:
         finalStr += str(record.ruid) + "\t" + str(record.diagnosisYr) + "\r"
+        finalStr += "Drugs\tDrug Dates\tSymptoms\tSymptom Dates\r"
+        for drug in record.drugs:
+            for date in record.drugs[drug]:
+                finalStr += str(drug) + "\t" + str(date) + "\r"
     with open("/home/suttons/MSDataAnalysis/output/mainOutput.txt", "a") as txtFile:
         txtFile.write(finalStr)
 

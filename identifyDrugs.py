@@ -11,8 +11,8 @@ from rules.identifyDrugYearRules.ContextRule import ContextRule
 
 
 #def run(records, finalRecords):
-def run(rm, records):
-    contextRule = ContextRule("ContextRule")
+def run(rm, records, finalRecords):
+    contextRule = ContextRule("ContextRule", finalRecords)
     totalMeds = {}
     ruids = []
 
@@ -21,76 +21,103 @@ def run(rm, records):
     #     if finalRecord.ruid not in ruids:
     #         ruids.append(finalRecord.ruid)
 
+
     #use a mocked out set of positives to speed testing up
     ruids = [
-    7,
-    10,
-    67,
-    68,
-    69,
-    71,
-    72,
-    74,
-    75,
-    79,
-    80,
-    101,
-    109,
-    119,
-    194,
-    195,
-    196,
-    197,
-    199,
-    200,
-    201,
-    202,
-    203,
-    205,
-    210,
-    212,
-    213
+    7	,
+    10	,
+    67	,
+    68	,
+    69	,
+    71	,
+    72	,
+    74	,
+    75	,
+    79	,
+    80	,
+    101	,
+    109	,
+    119	,
+    194	,
+    195	,
+    196	,
+    197	,
+    199	,
+    200	,
+    201	,
+    202	,
+    203	,
+    205	,
+    210	,
+    212	,
+    213	,
+    231	,
+    278	,
+    362	,
+    373	,
+    376	,
+    383	,
+    387	,
+    404	,
+    407	,
+    554	,
+    555	,
+    556	,
+    560	,
+    561	,
+    562	,
+    564	,
+    567	,
+    597	,
+    625	,
+    626	,
+    627	,
+    629	,
+    631	,
+    633	,
+    637	,
+    639	,
+    640	,
+    641	,
+    653	,
+    671	,
+    674	,
+    711	,
+    715	,
+    719	,
+    720	,
+    724	,
+    741	,
+    760	,
+    762	,
+    764	,
+    850	,
+    851	,
+    854
     ]
-
-    for ruid in ruids:
-        totalMeds[ruid] = getMedRecords(ruid)
-
 
     #take each patient found in identify diagnosis year, check all their records to find the drugs
     i = 0
     length = len(records)
     for record in records:
-        if record.ruid in totalMeds:
-            for medName in totalMeds[record.ruid]:
-                check = contextRule.run(record, medName)
-            i += 1
-            progress = round((i/length) * 100, 2)
-            sys.stdout.write("Identifying drug dates... %d%%   \r" % (progress) )
-            sys.stdout.flush()
+        if(record.ruid in ruids):
+            check = contextRule.run(record)
+        i += 1
+        progress = round((i/length) * 100, 2)
+        sys.stdout.write("Identifying drug dates... %d%%   \r" % (progress) )
+        sys.stdout.flush()
 
-def getMedRecords(ruid):
-    meds = []
-    try:
-        cnx = mysql.connector.connect(user=rm.username,
-                                    password=rm.password,
-                                    host='localhost',
-                                    database='MFD_MS')
-        cursor = cnx.cursor(prepared=True)
-        #Training set pulled out here, just getting the first x  patients' records
-        show_DB = "select  med from meds where ruid = " + str(ruid) + ";"
-        cursor.execute(show_DB, multi=True)
-        results = cursor.fetchall()
-        for result in results:
-            meds.append(result[0])
+    return contextRule.finalRecords
 
-    except mysql.connector.Error as err:
-      if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-        print("Something is wrong with your user name or password")
-      elif err.errno == errorcode.ER_BAD_DB_ERROR:
-        print("Database does not exist")
-      else:
-        print(err)
-    else:
-      cnx.close()
-
-    return meds
+    # for ruid in contextRule.masterDict:
+    #     with open("/home/suttons/MSDataAnalysis/output/drugtest.txt", "a") as txtFile:
+    #         stringLine = "RUID: " + str(ruid) + "\r"
+    #         txtFile.write(stringLine)
+    #     for drug in contextRule.masterDict[ruid]:
+    #         with open("/home/suttons/MSDataAnalysis/output/drugtest.txt", "a") as txtFile:
+    #             stringLine = "\t" + str(drug) + "\r"
+    #             txtFile.write(stringLine)
+    #         for date in contextRule.masterDict[ruid][drug]:
+    #             with open("/home/suttons/MSDataAnalysis/output/drugtest.txt", "a") as txtFile:
+    #                 stringLine = "\t\t" + str(date) + "\r"
+    #                 txtFile.write(stringLine)

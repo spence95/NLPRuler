@@ -81,7 +81,7 @@ class RecordsManager():
                                         database='MFD_MS')
             cursor = cnx.cursor(prepared=True)
             #Training set pulled out here, just getting the first x  patients' records, when grouper = 5 it means patient does not have MS
-            show_DB = "select  ruid, entry_date, content from notes where ruid in (Select * from (select distinct ruid from notes where grouper != 5 order by ruid Limit 200) as t);"
+            show_DB = "select  ruid, entry_date, content from notes where ruid in (Select * from (select distinct ruid from notes where grouper != 5 order by ruid, entry_date Limit 200) as t);"
             #show_DB = "select ruid, entry_date, content from notes where (ruid = 383)"
             cursor.execute(show_DB, multi=True)
             results = cursor.fetchall()
