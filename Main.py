@@ -21,23 +21,28 @@ def run():
     records = rm.records
 
     #run the diagnosis year analysis (this object pertains to CalledRecordDiagnoseYr class)
-    finalRecords = identifyDiagnosisYear.run(records)
+    #finalRecords = identifyDiagnosisYear.run(records)
 
     #run the drugs analysis
-    finalRecords = identifyDrugs.run(rm, records, finalRecords)
+    finalRecords = identifyDrugs.run(rm, records)
 
     #run the symptoms analysis
-    #identifySymptoms.run(finalRecords, rm)
+    #identifySymptoms.run(records, finalRecords)
 
     ### output all of our info from all the analysis into a tab-delimited text file ###
-    finalStr = "RUID\tDiagnosis Year\r"
+    diagnosisYrStr = "RUID\tDiagnosis Year\r"
     for record in finalRecords:
-        finalStr += str(record.ruid) + "\t" + str(record.diagnosisYr) + "\r"
-        finalStr += "Drugs\tDrug Dates\tSymptoms\tSymptom Dates\r"
-        for drug in record.drugs:
-            for date in record.drugs[drug]:
-                finalStr += str(drug) + "\t" + str(date) + "\r"
-    with open("/home/suttons/MSDataAnalysis/output/mainOutput.txt", "a") as txtFile:
-        txtFile.write(finalStr)
+        diagnosisYrStr += str(record.ruid) + "\t" + str(record.diagnosisYr) + "\r"
+
+    with open("/home/suttons/MSDataAnalysis/output/diagnosisYears.txt", "a") as txtFile:
+        txtFile.write(diagnosisYrStr)
+
+    drugsStr = "RUID\tDrug\tStart Date\tEnd Date\r"
+    for record in finalRecords:
+        for key in record.drugs:
+            drugsStr += str(record.ruid) + "\t" + str(record.drugs[key].name) + "\t" + str(record.drugs[key].startDate) + "\t" + str(record.drugs[key].endDate) + "\r"
+
+    with open("/home/suttons/MSDataAnalysis/output/drugRanges.txt", "a") as txtFile:
+        txtFile.write(drugsStr)
 
 run()

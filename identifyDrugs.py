@@ -8,18 +8,17 @@ from mysql.connector import errorcode
 
 from rules.Rule import Rule
 from rules.identifyDrugYearRules.ContextRule import ContextRule
+from FinalRecord import FinalRecord
+
 
 
 #def run(records, finalRecords):
-def run(rm, records, finalRecords):
-    contextRule = ContextRule("ContextRule", finalRecords)
+#def run(rm, records, finalRecords):
+def run(rm, records):
     totalMeds = {}
     ruids = []
 
-    #get a list of drugs per patient ruid
-    # for finalRecord in finalRecords:
-    #     if finalRecord.ruid not in ruids:
-    #         ruids.append(finalRecord.ruid)
+
 
 
     #use a mocked out set of positives to speed testing up
@@ -95,6 +94,21 @@ def run(rm, records, finalRecords):
     851	,
     854
     ]
+
+    finalRecords = []
+    for ruid in ruids:
+        fr = FinalRecord()
+        fr.ruid = ruid
+        finalRecords.append(fr)
+
+
+    contextRule = ContextRule("ContextRule", finalRecords)
+
+    #get a list of drugs per patient ruid
+    # for finalRecord in finalRecords:
+    #     if finalRecord.ruid not in ruids:
+    #         ruids.append(finalRecord.ruid)
+
 
     #take each patient found in identify diagnosis year, check all their records to find the drugs
     i = 0

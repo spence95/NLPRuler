@@ -39,7 +39,7 @@ def run(records):
             #contextrule uses a lot of regex to narrow down the year
             check = contextRule.run(record, entry_year)
             if(check == False):
-                #impressionrule exists specifically to call out records where the patients
+                #impressionrule exists specifically to call out records where the patient
                 #is diagnosed in the visit
                 check = impressionRule.run(record, entry_year)
 
