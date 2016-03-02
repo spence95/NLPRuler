@@ -21,10 +21,12 @@ def run():
     records = rm.records
 
     #run the diagnosis year analysis (this object pertains to CalledRecordDiagnoseYr class)
-    #finalRecords = identifyDiagnosisYear.run(records)
+    finalRecords = identifyDiagnosisYear.run(records)
 
     #run the drugs analysis
-    finalRecords = identifyDrugs.run(rm, records)
+    #records = rm.getDrugRecords()
+    #print("got records")
+    #finalRecords = identifyDrugs.run(rm, records)
 
     #run the symptoms analysis
     #identifySymptoms.run(records, finalRecords)

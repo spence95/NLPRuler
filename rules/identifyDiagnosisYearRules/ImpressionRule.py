@@ -7,7 +7,7 @@ import difflib
 
 class ImpressionRule(Rule):
     impressionLimit = 250
-    diagnosesLimit = 50
+    diagnosesLimit = 125
     lowerLimit = 120
     upperLimit = 120
     msLimit = 25
@@ -21,7 +21,12 @@ class ImpressionRule(Rule):
         calledRecord = CalledRecordDiagnoseYr(record.ruid, record.entry_date, record.content)
         calledRecord.calledRule = self.name
         record = record.content
-        msRegex = r'.{0,' + str(self.msLimit) + '}multiple\ssclerosis|multiplesclerosis|\sms\s|:ms\s.{0,' + str(self.msLimit) + '}'
+        #msRegex = r'.{0,' + str(self.msLimit) + '}multiple\ssclerosis|multiplesclerosis|\sms\s|:ms\s.{0,' + str(self.msLimit) + '}'
+        msRegex  = r'.{0,' + str(self.impressionLimit) + '}multiple\ssclerosis.{0,' + str(self.impressionLimit) + '}|.{0,' \
+        + str(self.impressionLimit) + '}multiplesclerosis.{0,' + str(self.impressionLimit) + '}|.{0,' \
+        + str(self.impressionLimit) + '}\sMS\s' \
+        + '.{0,' + str(self.impressionLimit) + '}|.{0,' + str(self.impressionLimit) + '}:MS\s' \
+        + '.{0,' + str(self.impressionLimit) + '}|.{0,' + str(self.impressionLimit) + '}\sMS\.(?!\s*\*\*NAME).{0,' + str(self.impressionLimit) + '}'
         ### A lot of the positive records I was missing are the ones that are diagnosed in the visit
 
         #Search for known significant medical diagnoses and conditions and

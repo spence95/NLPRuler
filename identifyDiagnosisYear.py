@@ -16,26 +16,24 @@ def run(records):
     contextRule = ContextRule("ContextRule")
     impressionRule = ImpressionRule("ImpressionRule")
 
-    trueNegatives = 0
-    truePositives = 0
-    falseNegatives = 0
-    falsePositives = 0
-
-    positives = 0
-    negatives = 0
+    #length is used to show progress of script to user
     length = len(records)
 
     #array to pass to return to the main script to be combined with other NLP scripts
     positiveRecords = {}
 
+    #what eventually is returned. Composed of finalRecord objects
     finalRecords = []
 
     i = 0
+    #records was retrieved from RecordsManager.py in Main.py then passed to this script
     for record in records:
         i = i + 1
+        #sometimes the record doesn't even have an entry_date, we can't use that
         if(record.entry_date is not None):
+            #Get the last four digits of entry_date which is the year
             entry_year = int(str(record.entry_date)[:4])
-            #check becomes False or a year
+            #check becomes False or a called record object
             #contextrule uses a lot of regex to narrow down the year
             check = contextRule.run(record, entry_year)
             if(check == False):
@@ -43,14 +41,11 @@ def run(records):
                 #is diagnosed in the visit
                 check = impressionRule.run(record, entry_year)
 
-            if(check == False):
-                negatives += 1
-
             #if yearCheck isn't false than it's a year i.e. 1990
             if(check != False):
-                positives += 1
                 if(check.hardCall):
-                    #create final record and append to finalRecords here since hardCall is all like, do it now!
+                    #create final record and append to finalRecords here since hardCall
+                    #means that we are sure that it's this last diagnosis year we saw
                     finalRecord = FinalRecord()
                     finalRecord.ruid = record.ruid
                     #make sure it isn't already there
@@ -67,6 +62,7 @@ def run(records):
                         positiveRecords[check.ruid] = [check]
                     else:
                         positiveRecords[check.ruid].append(check)
+
                 #a file to help understand what's happening during the analysis
                 with open("/home/suttons/MSDataAnalysis/output/positiveRUIDsFullRecordsDiagnoseYr.txt", "a") as txtFile:
                     regex = re.compile(r'[\n\r\t]')
@@ -78,10 +74,6 @@ def run(records):
         progress = round((i/length) * 100, 2)
         sys.stdout.write("Identifying diagnosis years... %d%%   \r" % (progress) )
         sys.stdout.flush()
-
-    print("Number of positives: " + str(positives))
-    print("Number of negatives: " + str(negatives))
-
 
 
     #find the most frequent year and return that with the ruid
@@ -130,6 +122,8 @@ def run(records):
                 commonYr = distYear
             countList.append(count)
 
+        #TODO: If the algorithm only identifies one diagnosis date not from a hard rule, throw it out
+
 
         #check the length countlist i.e. [2] or [2, 2]
         #if the length is one, we're good
@@ -159,107 +153,3 @@ def run(records):
 
     print("Done with Diagnosis years!")
     return finalRecords
-
-    #runTrainingSet = input("Run training set? ")
-    #training set turned off for now
-    runTrainingSet = "N"
-    falseNegStr = ""
-    if(runTrainingSet == "Y"):
-        #prelim setup stuff
-        i = 0
-        greatestMatched = 0
-        yearDiagnoseStr = ""
-        falsePosStr = ""
-
-        #gets the training set record with positives and negatives taken from Dr. Davis's excel sheet
-        trainingSetRecords = rm.getTrainingSetRecords("TotalSet.txt")
-        length = len(trainingSetRecords)
-
-        for record in trainingSetRecords:
-
-            i = i + 1
-            isPositive = False
-            entry_year = int(record.entry_date[:4])
-            check = contextRule.run(record, entry_year)
-            if(check == False):
-                check = impressionRule.run(record, entry_year)
-            #if yearCheck isn't false than it's a year i.e. 1990
-            if(check != False):
-                isPositive = True
-
-                with open("/home/suttons/MSDataAnalysis/output/positiveRUIDs.txt", "a") as csvFile:
-                    regex = re.compile(r'[\n\r\t]')
-                    regex.sub(' ', check.calledText)
-                    stringLine = str(check.ruid) + "\t" + str(check.entry_date) + "\t" + str(check.calledYear) + "\t" + str(check.calledRule) + "\t" + str(check.calledText) + "\r"
-                    csvFile.write(stringLine)
-                yearDiagnoseStr += str(record.ruid) + " ---> " + str(check.calledYear) + "\n"
-
-
-
-            if(isPositive):
-                if(record.isPositive):
-                    if(str(record.diagnosisYr) != str(check.calledYear)):
-                        falsePositives += 1
-                        falsePosStr += str(record.ruid) + " " + str(record.entry_date) + "\r"
-
-                    else:
-                        truePositives += 1
-                else:
-                    #false Positive
-                    falsePositives += 1
-                    falsePosStr += str(record.ruid) + " " + str(record.entry_date) + " not MS " + "\r"
-
-            else:
-                if(record.isPositive):
-                    #false negative
-                    falseNegatives += 1
-                    falseNegStr += str(record.ruid) + " " + str(record.entry_date) + "\r"
-                else:
-                    #true negative
-                    trueNegatives += 1
-
-            progress = round((i/length) * 100, 2)
-            sys.stdout.write("Script progress: %d%%   \r" % (progress) )
-            sys.stdout.flush()
-
-
-
-        print("             ")
-        print("             ")
-        actualPositives = truePositives + falseNegatives
-        actualNegatives = trueNegatives + falsePositives
-        #print accuracy: (TP + TN)/total
-        accuracy = round(((truePositives + trueNegatives)/length) * 100, 2)
-        print("Accuracy (TP + TN)/total: " + str(accuracy) + "%")
-        #print misclassification rate: (FP + FN)/total
-        misclassificationRate = round(((falsePositives + falseNegatives)/length) * 100, 2)
-        print("Misclassification Rate (FP + FN)/total: " + str(misclassificationRate) + "%")
-        #print true positive rate: TP/actualPositive
-        truePositiveRate = round(((truePositives/actualPositives)) * 100, 2)
-        print("True Positive Rate (TP/actual Positives): " + str(truePositiveRate) + "%")
-        #print false positive rate: FP/actualNegative
-        falsePositiveRate = round(((falsePositives/actualNegatives)) * 100, 2)
-        print("False Positive Rate (FP/actual Negatives): " + str(falsePositiveRate) + "%")
-        #print specificity: TN/actualNegative
-        specificity = round((trueNegatives/actualNegatives) * 100, 2)
-        print("Specificity (TN/actual Negatives): " + str(specificity) + "%")
-        print("                          ")
-
-        print("True Positives: " + str(truePositives))
-        print("True Negatives: " + str(trueNegatives))
-        print("False Positives: " + str(falsePositives))
-        print("False Negatives: " + str(falseNegatives))
-
-
-
-
-    f = open("/home/suttons/MSDataAnalysis/output/yearOutput.txt", 'w')
-    print(yearDiagnoseStr, file = f)
-
-    f = open("/home/suttons/MSDataAnalysis/output/falseNegOutput.txt", 'w')
-    print(falseNegStr, file = f)
-
-    f = open("/home/suttons/MSDataAnalysis/output/falsePosOutput.txt", 'w')
-    print(falsePosStr, file = f)
-
-    return []

@@ -18,6 +18,12 @@ def run(rm, records):
     totalMeds = {}
     ruids = []
 
+        #get a list of drugs per patient ruid
+    # for finalRecord in finalRecords:
+    #     if finalRecord.ruid not in ruids:
+    #         ruids.append(finalRecord.ruid)
+
+
 
 
 
@@ -96,6 +102,7 @@ def run(rm, records):
     ]
 
     finalRecords = []
+
     for ruid in ruids:
         fr = FinalRecord()
         fr.ruid = ruid
@@ -104,10 +111,7 @@ def run(rm, records):
 
     contextRule = ContextRule("ContextRule", finalRecords)
 
-    #get a list of drugs per patient ruid
-    # for finalRecord in finalRecords:
-    #     if finalRecord.ruid not in ruids:
-    #         ruids.append(finalRecord.ruid)
+
 
 
     #take each patient found in identify diagnosis year, check all their records to find the drugs

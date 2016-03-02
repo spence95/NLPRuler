@@ -16,28 +16,40 @@ class ContextRule(Rule):
     lowerLimit = 100
     yearUpperLimit = 155
     yearLowerLimit = 155
+    #below is used in regex for header information
     smallBoundsLimit = 20
 
+    #this is a bit of regex used repeatedly throughout  this script, explanation for
+    #why I did it this way can be found in other parts
+    #the last one gets MS. when it isn't a title for a person
     smallerBoundsMSRegex = r'multiple\ssclerosis.{0,' + str(smallBoundsLimit) + '}|' \
     + 'multiplesclerosis.{0,' + str(smallBoundsLimit) + '}|' \
     + '\sMS\s.{0,' + str(smallBoundsLimit) + '}' \
     + '|:MS\s.{0,' + str(smallBoundsLimit) + '}' \
     + '|\sMS-.{0,' + str(smallBoundsLimit) + '}' \
-    + '|\sMS\.(?!\s*\*\*NAME).{0,' + str(smallBoundsLimit) + '}'
+    + '|\sMS\.(?!\s*\*\*NAME).{0,' + str(smallBoundsLimit) + '}' \
+    + '|:MS-.{0,' + str(smallBoundsLimit) + '}'
 
+    #the name attribute is only important for knowing what rule called the diagnosis year
+    #which for this part it would only either be the context rule or the impression rule
+    #and most of the time it's the context rule
     def __init__(self, name):
         self.name = name
 
     def run(self, record, entry_year):
         #some general organizing stuff for later when it comes to outputting record data
         calledRecord = CalledRecordDiagnoseYr(record.ruid, record.entry_date, record.content)
+        #lets me know as I check the accuracy of the algorithm that it was this rule that called the year
         calledRecord.calledRule = self.name
 
         #matches diagnosis, diagnosed, diagnos or multiple sclerosis or ms and returns the upperlimit amount of characters after and the lowerlimit of characters before
+        #I use this kind of regex a lot -> .{0, (some number)}(other regex).{0, (some number)} and all it does is grabs the amount of characters in that direction so
+        # .{0,100}diagnos.{0,100} would grab 100 characters before and after any 'diagnos' string
         regex = r'.{0,' + str(self.lowerLimit) + '}diagnos.{0,' + str(self.upperLimit) + '}'
+        #re.IGNORECASE is really important. It slows down the algorithm A LOT but it greatly increases its accuracy
         diagnoseMatches = re.findall(regex, record.content, re.IGNORECASE)
 
-        #used
+        #used to find out the most common year repeated in this one record
         yearMaps = []
 
         for diagnoseMatch in diagnoseMatches:
@@ -46,29 +58,43 @@ class ContextRule(Rule):
             #false positives. We also split it up by new line, >, <, in addition
             #to periods.
             #splitDiagnoseMatches = diagnoseMatch.split('.')
+            #I took this sentence split from Dr. Davis's script here remarks are:
+            ####Split the note into sentences or phrases. ---- and >< were common things I found that displayed long lists
+            ####instead of phrases and made my searching more difficult
             splitDiagnoseMatches = diagnoseMatch.split('(?:\.\s+)|(?:-(?:\s+)?)+|(?:>\s?<)|\\n')
+            #for each sentence
             for splitDiagnoseMatch in splitDiagnoseMatches:
                 #Check for negating language here. This could be done better but serves our
                 #purposes for now
                 regex = r'\sno.\s|can\'t|cannot|negative|possible'
                 negMatches = re.findall(regex, splitDiagnoseMatch, re.IGNORECASE)
 
+                #if there aren't any negative language
                 if(len(negMatches) == 0):
-                    #Checks for wording that needs to appear before the ms match
+                    #Checks for wording that needs to appear before any variation of MS
+                    #the amount of characters to check preceding MS is degined by lowerlimit at the
+                    #start of this record
                     beforeMSRegex = r'.{0,' + str(self.lowerLimit) + '}multiple\ssclerosis|.{0,' \
                     + str(self.lowerLimit) + '}multiplesclerosis|.{0,' \
                     + str(self.lowerLimit) + '}\sMS\s' \
                     + '|.{0,' + str(self.lowerLimit) + '}:MS\s' \
-                    + '|.{0,' + str(self.lowerLimit) + '}\sMS\.(?!\s*\*\*NAME)'
+                    + '|.{0,' + str(self.lowerLimit) + '}\sMS\.(?!\s*\*\*NAME)' \
+                    + '|.{0,' + str(self.lowerLimit) + '}:MS-.'
                     beforeMSMatches = re.findall(beforeMSRegex, splitDiagnoseMatch, re.IGNORECASE)
+                    #iterate through all the matches
                     for beforeMSMatch in beforeMSMatches:
                         #if the specific "diagnosed in" appears before the year than no need for tie breaker, go with that year
                         diagnosedInRegex = "diagnosed\sin\s(19|20)\d{2}"
+                        #re.search is different than re.findall in that it only looks for the first match and then returns out of it
+                        #in order to read that match you access it with .group()
                         diagnosedInMatch = re.search(diagnosedInRegex, beforeMSMatch, re.IGNORECASE)
                         if(diagnosedInMatch):
                             #this is a hard return meaning that it calls the diagnosis year right here and now
+                            #gets the last 4 letters of that match which we know from the regex it's the year
                             calledRecord.calledYear = diagnosedInMatch.group()[-4:]
                             calledRecord.calledText = beforeMSMatch
+                            #we don't use hardCall here because we want this to be included with a common consensus
+                            #year calculation made in identifyDiagnosisYear.py
                             return calledRecord
 
 
@@ -77,8 +103,11 @@ class ContextRule(Rule):
                     specialMSMatch = re.search(specialMSRegex, splitDiagnoseMatch, re.IGNORECASE)
                     if(specialMSMatch):
                         #this is a hard return meaning that it calls the diagnosis year right here and now
+                        #gets the last 4 letters of that match which we know from the regex it's the year
                         calledRecord.calledYear = specialMSMatch.group()[-4:]
                         calledRecord.calledText = specialMSMatch.group()
+                        #.hardCall = True is used in identifyDiagnosisYear.py to ignore finding a common consensus year
+                        #and to just go with this year found here
                         calledRecord.hardCall = True
                         return calledRecord
 
@@ -88,20 +117,21 @@ class ContextRule(Rule):
                         #this is a hard return meaning that it calls the diagnosis year right here and now
                         calledRecord.calledYear = specialMSMatch.group()[-4:]
                         calledRecord.calledText = specialMSMatch.group()
+                        #.hardCall = True is used in identifyDiagnosisYear.py to ignore finding a common consensus year
+                        #and to just go with this year found here
                         calledRecord.hardCall = True
                         return calledRecord
 
 
 
-                    #search for MS in the sentence
+                    #search for any variation of MS in the sentence
                     regex =  r'multiple\ssclerosis|' \
                     + 'multiplesclerosis|' \
                     + '\sMS\s' \
-                    + '|:MS\s'\
-                    + '|\sMS\.(?!\s*\*\*NAME)'
-                    # MSMatches = re.findall(regex, splitDiagnoseMatch, re.IGNORECASE)
+                    + '|:MS\s' \
+                    + '|\sMS\.(?!\s*\*\*NAME)' \
+                    + '|:MS-'
                     MSFound = re.search(regex, splitDiagnoseMatch, re.IGNORECASE)
-                    # for MSMatch in MSMatches:
                     if(MSFound):
                         #if the phrase "Known Significant Medical Diagnoses and Conditions:" appears in the match
                         #make sure the year is in very close proximity to MS. This means we are in the header and
@@ -135,22 +165,25 @@ class ContextRule(Rule):
                                         calledRecord.calledText = knownMSMatch.group()
                                         return calledRecord
 
-                        #this particular split helps occasionally
-                        splitMSMatch = MSMatch.split('.')
+                        #this particular split helps occasionally. It's a simpler version of splitting by sentence.
+                        #In general, narrowing down the amount of text I searched for the diagnosis year helped
+                        #reduce false positives
+                        splitMSMatch = splitDiagnoseMatch.split('.')
                         for splitMatch in splitMSMatch:
                             #search for negating language
                             #look for negating language
                             negRegex = r'\sdoes\snot\s|\scan\'t\s|\swill\snot\s|\scannot\s|\scan\snot\s|\swon\'t\s|\sruledout\s|\sruled\sout\s'
                             negMatch = re.search(negRegex, splitMatch, re.IGNORECASE)
 
+                            #if negating language is found than move on to the next sentence
                             if(negMatch):
-                                return False
+                                continue
 
                             #This is another hard return. Looks for diagnosed in (year) within that sentence that also mentions MS
                             diagnosedInRegex = "diagnosed\sin\s(19|20)\d{2}"
                             diagnosedInMatch = re.search(diagnosedInRegex, splitMatch, re.IGNORECASE)
                             if(diagnosedInMatch):
-                                #this is a hard return
+                                #this is a hard return but we don't do a hard call which would automatically call the diagnosis year as this year
                                 calledRecord.calledYear = diagnosedInMatch.group()[-4:]
                                 calledRecord.calledText = splitMatch
                                 return calledRecord
@@ -207,13 +240,14 @@ class ContextRule(Rule):
                                         else:
                                             specificYr = "20" + specificYr[-2:]
 
-                                    #search for dating back to language
+                                    #search for dating back to language (doesn't find much)
                                     datesBackRegex = "dat[ie][nsd][g]?\sback\sto"
                                     dateMatch = re.search(datesBackRegex, splitMatch, re.IGNORECASE)
                                     if(dateMatch):
                                         calledMap = {'calledYear': str(specificYr), 'calledText': splitMatch}
                                         yearMaps.append(calledMap)
 
+                                    #search for symptoms began language (doesn't find much)
                                     beganRegex = "(symptoms|symptom)\sbegan"
                                     beganMatch = re.search(beganRegex, splitMatch, re.IGNORECASE)
                                     if(beganMatch):
@@ -235,10 +269,12 @@ class ContextRule(Rule):
 
 
 
+            #if we found at least one diagnosis year in the record
             if(len(yearMaps) > 0):
                 #find out the most common year repeated in this one record, ties are broken by later year
                 yearMaps =  sorted(yearMaps, key=itemgetter('calledYear'), reverse=True)
 
+                #this bit of code determines the most frequent diagnosis year used in this record
                 commonYr = 0000
                 count = 0
                 for yearMap in reversed(yearMaps):
@@ -250,9 +286,10 @@ class ContextRule(Rule):
                         count = inLoopCount
                         commonYr = yearMap['calledYear']
 
-
                 calledRecord.calledYear = commonYr
 
+                #used to determine the accuracy of the algorithm since we don't have a
+                #specified set of records to train from
                 calledText = ""
                 #construct all the text used to call this record
                 for yearMap in yearMaps:
@@ -260,6 +297,9 @@ class ContextRule(Rule):
                         calledText += yearMap['calledText']
                         calledText += '\t'
                 calledRecord.calledText = calledText
+
+                #returning the called record is the same thing as saying that we found a diagnosis year in this record
                 return calledRecord
 
+        #when nothing else is found we return False since the record doesn't give a diagnosis year
         return False

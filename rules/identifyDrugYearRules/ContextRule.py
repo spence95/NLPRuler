@@ -27,10 +27,13 @@ class ContextRule(Rule):
             self.masterDict[record.ruid] = {}
         #TODO: the medications part of this regex needs to get until the end of listed medications, not just 1000 characters after
         prescriptionsRegex = r'Medications\sKnown\sto\sbe\sPrescribed(.*?)--|Medications:.{0,1000}'
-        prescriptionsSearch = re.search(prescriptionsRegex, record.content, re.IGNORECASE)
-        if(prescriptionsSearch):
+        prescriptionsSearch = re.findall(prescriptionsRegex, record.content, re.IGNORECASE)
+        match = ""
+        for group in prescriptionsSearch:
+            match = match + " " + group
+        if(match != ""):
             for drugName in self.drugNames:
-                drugNameSearch = re.search(drugName, prescriptionsSearch.group(), re.IGNORECASE)
+                drugNameSearch = re.search(drugName, match, re.IGNORECASE)
                 if(drugNameSearch):
                     #find the final records with the corresponding ruid
                     for fr in self.finalRecords:
@@ -134,6 +137,11 @@ class ContextRule(Rule):
         'Tecfidera',
         'Lemtrada',
         'Novantrone',
-        'Tysabri'
+        'Tysabri',
+        'Glatiramer\sacetate',
+        'Interferon\sbeta-1b',
+        'CinnoVex',
+        'Plegridy',
+        'peginterferon\sbeta-1a'
         ]
         return drugNames
